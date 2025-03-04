@@ -1,13 +1,22 @@
 import numpy as np  
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-from datetime import datetime
 import os
-from scipy.spatial import ConvexHull
+import gdist
+import struct
 opj = os.path.join
 
 from dpu_mini.utils import *
+from dpu_mini.fs_tools import dag_serialize_volume_info
 from dpu_mini.plot_functions import *
+
+
+def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
+    submesh = dag_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
+    geo_dists = gdist.local_gdist_matrix(
+        vertices=submesh['coords'].astype(np.float64),
+        triangles=submesh['faces'].astype(np.int32),
+    )
+    return geo_dists
 
 def dag_find_isolated_vx(mesh_info, roi_bool):
     ''' Find isolated vertices in (connected to no other faces) '''
@@ -403,7 +412,6 @@ def dag_igl_flatten(mesh_info, **kwargs):
     roi_bool = centre_bool.copy()
     successful_flatten = False
     # morph = kwargs.pop('morph', 0)
-    import contextlib
     n_steps = 0
     total_morph = 0
     while (not successful_flatten) & (n_steps<100):        

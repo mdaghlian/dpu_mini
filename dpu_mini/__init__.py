@@ -1,14 +1,6 @@
 # Check for requirements:
 import os
 import subprocess
-
-# ************************** CHECK FOR IMPORTANT STUFF **************************
-# Nibabel
-try:
-    from nibabel.freesurfer.io import write_morph_data        
-except ImportError:
-    print('Error importing nibabel... Not a problem unless you want to use FSMaker')
-
 # ************************** SPECIFY FS_LICENSE HERE **************************
 # [1] Freesurfer, freeview
 fs_cmd_list = ['freeview']
@@ -24,12 +16,6 @@ if 'FS_LICENSE' in os.environ.keys():
 else:
     print('Could not find FS_LICENSE')
     print('Uncomment line below and specify path to FS_LICENSE')
-
-# [3] pycortex
-try: 
-    import cortex 
-except ImportError:
-    print('Error importing pycortex... Not a problem unless you want to use pycortex stuff')
 
 
 # ************************** CHECK FOR SUBJECTS DIR **************************

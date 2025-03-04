@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os
-import subprocess
+import pandas as pd
 opj = os.path.join
 
 from dpu_mini.utils import *
@@ -625,60 +625,6 @@ class GenMeshMaker(FSMaker):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     # *****************************************************************
     # *****************************************************************
     # *****************************************************************
@@ -728,14 +674,6 @@ class GenMeshMaker(FSMaker):
         self.ply_files[surf_name] = [
             ply_file_2open
         ]
-    def open_ply_mlab(self):
-        # mlab_cmd = 'meshlab '
-        mlab_cmd = '/data1/projects/dumoulinlab/Lab_members/Marcus/programs/MeshLab2022.02-linux/AppRun '
-        for key in self.ply_files.keys():            
-            mlab_cmd += f' lh.{key}.ply'
-            mlab_cmd += f' rh.{key}.ply'
-        # os.chdir(self.output_dir)
-        # os.system(mlab_cmd)
-        subprocess.run(mlab_cmd, shell=True, cwd=self.output_dir)
+
     
     #endregion PLY FUNCTIONS

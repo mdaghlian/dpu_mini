@@ -4,13 +4,13 @@ import matplotlib as mpl
 import seaborn as sns
 from matplotlib import patches
 from scipy.stats import binned_statistic
-import json
 import os
+import pandas as pd
 opj = os.path.join
 
-
-from dag_prf_utils.utils import *
-from dag_prf_utils.cmap_functions import *
+from dpu_mini.stats import *
+from dpu_mini.utils import *
+from dpu_mini.cmap_functions import *
 
 # Default bounds for visual field plotting
 default_ecc_bounds =  np.linspace(0, 5, 7)

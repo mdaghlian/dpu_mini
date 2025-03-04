@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.stats import t
 from scipy.fftpack import dct, idct
-
-
+from scipy.spatial.transform import Rotation as R
 
 def dag_rescale_bw(data_in, **kwargs):
     '''dag_rescale_bw    
@@ -298,7 +297,7 @@ def dag_coord_convert(a,b,old2new):
         new_b = pol
         
     return new_a, new_b
-from scipy.spatial.transform import Rotation as R
+
 def dag_coord_rot(coords, angles):
     '''
     Rotate coordinates
@@ -395,7 +394,7 @@ def dag_pol_to_clock(pol):
     # Convert angles to the range [0, 12)
     clock_values = (pol / (2 * np.pi)) * 12
     return clock_values
-from scipy.spatial.transform import Rotation as R
+
 
 def dag_weighted_mean(w,x, axis='all'):
     # w_mean = np.sum(w * x) / np.sum(w) # original form

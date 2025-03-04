@@ -6,8 +6,6 @@ import re
 from copy import copy
 import matplotlib as mpl
 import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
-
 from dpu_mini.stats import dag_rescale_bw
 
 # Load custom color maps

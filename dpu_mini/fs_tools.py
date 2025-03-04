@@ -1,9 +1,8 @@
 import numpy as np  
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from datetime import datetime
 import subprocess
 import os
+import struct
+from collections import OrderedDict
 opj = os.path.join
 
 from dpu_mini.utils import *
@@ -14,7 +13,6 @@ path_to_utils = os.path.abspath(os.path.dirname(__file__))
 
 class FSMaker(object):
     '''Used to make a freesurfer file, and view a surface in freesurfer. 
-    One of many options for surface plotting. 
     Will create a curv file in subjects freesurfer dir, and load it a specific colormap 
     saved as the relevant command
     '''
@@ -26,7 +24,7 @@ class FSMaker(object):
         self.sub_surf_dir = opj(fs_dir, sub, 'surf')
         self.sub_label_dir = opj(fs_dir, sub, 'label')
         #
-        self.custom_surf_dir = opj(self.sub_surf_dir, 'custom')
+        self.custom_surf_dir = opj(self.sub_surf_dir, 'custom')         # Where to put the surfaces we make
         n_vx, n_faces = dag_load_nfaces_nverts(self.sub, self.fs_dir)
         self.n_vx = {'lh':n_vx[0], 'rh':n_vx[1]}
         self.total_n_vx = sum(n_vx)
@@ -708,6 +706,36 @@ def dag_make_overlay_str(**kwargs):
 # ***********************************************************************************************************************
 # STUFF COPIED FROM NIBABEL
 # ***********************************************************************************************************************
+
+def dag_serialize_volume_info(volume_info):
+    """Copied from from https://github.com/nipy/nibabel/blob/master/nibabel/freesurfer/io.py
+    Helper for serializing the volume info.
+    """
+    keys = ['head', 'valid', 'filename', 'volume', 'voxelsize', 'xras', 'yras', 'zras', 'cras']
+    diff = set(volume_info.keys()).difference(keys)
+    if len(diff) > 0:
+        raise ValueError(f'Invalid volume info: {diff.pop()}.')
+
+    strings = list()
+    for key in keys:
+        if key == 'head':
+            if not (
+                np.array_equal(volume_info[key], [20])
+                or np.array_equal(volume_info[key], [2, 0, 20])
+            ):
+                print('Unknown extension code.')
+            strings.append(np.array(volume_info[key], dtype='>i4').tobytes())
+        elif key in ('valid', 'filename'):
+            val = volume_info[key]
+            strings.append(f'{key} = {val}\n'.encode())
+        elif key == 'volume':
+            val = volume_info[key]
+            strings.append(f'{key} = {val[0]} {val[1]} {val[2]}\n'.encode())
+        else:
+            val = volume_info[key]
+            strings.append(f'{key:6s} = {val[0]:.10g} {val[1]:.10g} {val[2]:.10g}\n'.encode())
+    return b''.join(strings)
+
 def dag_fread3(fobj):
     """Read a 3-byte int from an open binary file object
 
