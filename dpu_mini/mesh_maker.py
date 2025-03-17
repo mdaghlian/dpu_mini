@@ -446,7 +446,7 @@ class GenMeshMaker(FSMaker):
             self.mesh_info[flat_name][hemi]['j'] = flat_polys[:,1]
             self.mesh_info[flat_name][hemi]['k'] = flat_polys[:,2]    
 
-    def make_flat_map(self, **kwargs):
+    def make_flat_map(self, centre_bool=None, **kwargs):
         '''
         Pycotex uses flatmaps for a bunch of things
         But if you can't be bothered to do it properly, and just want
@@ -458,6 +458,7 @@ class GenMeshMaker(FSMaker):
 
         TODO: remove cut from Y 
         '''
+
         if not os.path.exists(self.custom_surf_dir):
             os.makedirs(self.custom_surf_dir)
         method = kwargs.pop('method', 'latlon')
@@ -465,11 +466,18 @@ class GenMeshMaker(FSMaker):
         hemi_project = kwargs.get('hemi_project', 'sphere')
         flat_name = kwargs.get('flat_name', 'flat')
         centre_roi = kwargs.get('centre_roi', None)
-        centre_bool = kwargs.pop('centre_bool', np.zeros(self.total_n_vx, dtype=bool))
+        if centre_bool is None:
+            centre_bool = np.ones_like(self.total_n_vx, dtype=bool)
         centre_bool_hemi = {
             'lh': centre_bool[:self.n_vx['lh']],
             'rh': centre_bool[self.n_vx['lh']:]
         }
+        vx_to_include = kwargs.pop('vx_to_include', centre_bool)        
+        vx_to_include = {
+            'lh': vx_to_include[:self.n_vx['lh']],
+            'rh': vx_to_include[self.n_vx['lh']:]
+        }
+
         cut_box = kwargs.get('cut_box', False)                        
         
         hemi_pts = {}
@@ -487,7 +495,7 @@ class GenMeshMaker(FSMaker):
         for hemi in ['lh','rh']:
             hemi_kwargs = kwargs.copy()
             hemi_kwargs['z'] = new_z
-            hemi_kwargs['morph'] = morph
+            # hemi_kwargs['morph'] = morph
             if centre_roi is not None:
                 # Load the ROI bool for this hemisphere
                 centre_bool_hemi[hemi] |= self._return_roi_bool_both_hemis(centre_roi, **kwargs)[hemi]
@@ -498,6 +506,12 @@ class GenMeshMaker(FSMaker):
                     mesh_info=self.mesh_info['inflated'][hemi],
                     vx_bool=centre_bool_hemi[hemi],
                 )
+            else:
+                hemi_kwargs['vx_to_include'] = vx_to_include[hemi]
+            hemi_kwargs['vx_to_include'] = dag_mesh_morph(
+                mesh_info=self.mesh_info['inflated'][hemi], 
+                vx_bool=hemi_kwargs['vx_to_include'], 
+                morph=morph)
             hemi_kwargs['centre_bool'] = centre_bool_hemi[hemi]
             pts,polys,_ = dag_flatten(
                 mesh_info=self.mesh_info[hemi_project][hemi], 
@@ -513,10 +527,10 @@ class GenMeshMaker(FSMaker):
             flat[connected_pts] -= flat[connected_pts].mean(axis=0)
             scale_x = (infl_x.max() - infl_x.min()) / (flat[:,0].max() - flat[:,0].min())
             flat *= scale_x*3 # Meh seems nice enough
-            if hemi == 'rh':
-                # Flip x and y,
-                pts[:,0] = -pts[:,0]
-                pts[:,1] = -pts[:,1]                 
+            # if hemi == 'rh':
+            #     # Flip x and y,
+            #     # pts[:,0] = -pts[:,0]
+            #     pts[:,1] = -pts[:,1]                 
             if hemi == 'lh':
                 max_x_lh = flat[:,0].max()
             else:
@@ -571,7 +585,9 @@ class GenMeshMaker(FSMaker):
 
         for hemi in hemi_list: 
             if rot_angles is not None:
-                mpts[hemi] = dag_coord_rot(mpts[hemi], rot_angles)           
+                mpts[hemi] = dag_coord_rot(mpts[hemi], rot_angles)         
+            if np.isnan(mpts[hemi][0][0]):
+                continue
             triang = mpl.tri.Triangulation(
                 mpts[hemi][:,0],
                 mpts[hemi][:,1],
@@ -598,8 +614,9 @@ class GenMeshMaker(FSMaker):
                     x,y, 
                     # roi_dict['border_coords'][:,0],
                     # roi_dict['border_coords'][:,1],
+                    '.',
                     color='k',
-                    linewidth=2,
+                    linewidth=2, markersize=.8,
                     label=roi_dict['roi'] if roi_dict['first_instance'] else None,
                 )
         # Add color bar

@@ -559,7 +559,6 @@ def dag_flatten(mesh_info, **kwargs):
     flat_info['k']      = mesh_info['k'][f_to_include]
 
     pts = np.vstack([flat_info['x'],flat_info['y'], flat_info['z']]).T        
-    print('warning - move to zero - cehck this')
     pts[vx_not_included] = 0 # Move pts to cut to 0 ? 
     polys = flat_info['faces']
     return pts, polys, vx_to_include

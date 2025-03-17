@@ -2,6 +2,8 @@ import os
 import sys
 import string
 import random
+import subprocess
+import time
 opj = os.path.join
 
 def dag_random_string(length):
@@ -159,3 +161,41 @@ def dag_merge_dicts(a: dict, b: dict, max_depth=3, path=[]):
             merged_dict[key] = b[key]  # If the key is not in 'merged_dict', add it
     return merged_dict    
 
+def dag_get_cores_used():
+    user_name = os.environ['USER']
+    command = f"qstat -u {user_name}"  # Replace with your actual username
+    output = subprocess.check_output(command, shell=True).decode('utf-8')
+    if output == '':
+        return 0
+
+    lines = output.strip().split('\n')
+    header = lines[0].split()    
+    n_cols = len(lines[1].split())
+
+    count = 0 # sometimes take a second to load...
+    while 'qw' in output: # 
+        time.sleep(5)
+        count += 1
+        
+        output = subprocess.check_output(command, shell=True).decode('utf-8')
+        if output == '':
+            return 0    
+        if 'Eqw' in output:
+            print('EQW')    
+            sys.exit()
+        print(output)
+
+        lines = output.strip().split('\n')
+        header = lines[0].split()    
+        if count > 10:
+            print('bloop')
+            break
+
+    cores_index = header.index('slots')  # Or 'TPN' if 'C' is not available
+    cores = 0
+    for line in lines[2:]:
+        columns = line.split()
+        if columns:
+            cores += int(columns[cores_index])
+
+    return cores 

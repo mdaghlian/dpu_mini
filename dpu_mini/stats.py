@@ -49,68 +49,106 @@ def dag_get_corr(a, b):
     corr = np.corrcoef(a,b)[0,1]
     return corr
 
-def dag_detrending(ts_au, detrend_type, normalize_method='psc', baseline_pt=None):
+
+def dag_detrending(ts, detrend_method='poly', detrend_param=0, normalize_method='psc', baseline_pt=None):
     """
-    Perform detrending using Discrete Cosine Transform (DCT) and optionally Percentage Signal Change (PSC).
+    Detrend a time series using either DCT-based or polynomial detrending, with optional normalization.
 
-    Parameters:
-    - ts_au (numpy.ndarray): Input time series data, shape (n_vx, n_time_points).
-    - detrend_type (int or False): Number of DCT coefficients to remove for detrending. If False/0, no detrending is performed.
-    - normalize_method (str): Normalization method to use. Options are 'psc' (Percentage Signal Change) or 'zscore' (Z-score) or None.
-    - baseline_pt (np.ndarray, int, list, or None, optional): Baseline points used for PSC calculation. If None, all points are considered as baseline.
-        If 1 value: taske baseline values from 0 to baseline_pt
-        If 2 value: it represents the range of points [start, stop] as baseline.
-        If more   : it represents specific points as baseline.
+    Parameters
+    ----------
+    ts : numpy.ndarray
+        Input time series data with shape (n_voxels, n_time_points).
+    detrend_method : str, optional
+        Detrending method. Options:
+            - 'dct': Remove the first `detrend_param` DCT components.
+            - 'poly': Remove a polynomial trend of degree `detrend_param` (e.g., 1 for linear detrending).
+        Default is 'dct'.
+    detrend_param : int or False, optional
+        Parameter for detrending. For 'dct', it is the number of DCT components to remove.
+        For 'poly', it is the degree of the polynomial to remove.
+        If 0 or False, no detrending is performed.
+    normalize_method : str, optional
+        Normalization method applied after detrending. Options are:
+            - 'psc': Percentage Signal Change (requires an external function `dag_psc`).
+            - 'zscore': Z-score normalization.
+            - None: No normalization.
+        Default is 'psc'.
+    baseline_pt : int, list, numpy.ndarray, or None, optional
+        Baseline points for PSC calculation. If an integer, baseline values from 0 to baseline_pt are used.
+        If a list of two values, the range [start, stop] is used.
+        If more than two values, these specific points are used.
+        Only used if normalize_method is 'psc'.
 
-    Returns:
-    - numpy.ndarray: Detrended time series data, shape (n_vx, n_time_points).
+    Returns
+    -------
+    numpy.ndarray
+        Detrended (and optionally normalized) time series data with the same shape as input.
     """
-    if ts_au.ndim == 1:
-        ts_au = ts_au.reshape(-1, 1)
-
-    if detrend_type=='linear':
-        _, n_cols = ts_au.shape
-        
-        # Create the matrix A where each row is [x, 1] for all x values
-        x = np.arange(n_cols)
-        A = np.vstack([x, np.ones(n_cols)]).T  # Shape is (n_cols, 2)
-        
-        # Use lstsq (least squares solution) to solve for m and b for all rows at once
-        # y = array, A is the design matrix, A @ [m, b] = y
-        # np.linalg.lstsq solves the linear system A @ [m, b] = y for each row
-        coeffs = np.linalg.lstsq(A, ts_au.T, rcond=None)[0]
-        
-        # coeffs contains [m, b] for each row, but in transposed form
-        slopes = coeffs[0]  # First row corresponds to m (slopes)
-        # Subtract out the linear trend
-        ts_detrend = ts_au - (slopes[...,np.newaxis] * x)        
-
-    elif detrend_type!=0:
-        # Preparation: demean the time series
-        ts_au_centered = ts_au - np.mean(ts_au, axis=1, keepdims=True)
-
-        # Compute the DCT of the time series
-        dct_values = dct(ts_au_centered, type=2, norm='ortho', axis=1)
-
-        # Remove the specified number of coefficients
-        dct_values[:, :detrend_type] = 0
-
-        # Inverse DCT to obtain detrended time series
-        ts_detrend = idct(dct_values, type=2, norm='ortho', axis=1)
-
-        # Add the mean back to the detrended series
-        ts_detrend = ts_detrend + np.mean(ts_au, axis=1, keepdims=True)
-    else:
-        ts_detrend = ts_au.copy()
-
-    # Perform Percentage Signal Change (PSC) if specified
+    # Ensure ts is a 2D array (n_voxels, n_time_points)
+    if ts.ndim == 1:
+        ts = ts.reshape(1, -1)
     
-    if normalize_method == 'psc':
-        ts_detrend = dag_psc(ts_detrend, baseline_pt)
-    elif normalize_method == 'zscore':
-        ts_detrend = (ts_detrend - np.mean(ts_detrend, axis=1, keepdims=True)) / np.std(ts_detrend, axis=1, ddof=1, keepdims=True)
+    # No detrending requested
+    if not detrend_param:
+        detrended_ts = ts.copy()
+    
+    # Polynomial detrending
+    elif detrend_method == 'poly':
+        n_voxels, n_time = ts.shape
+        x = np.arange(n_time)
+        deg = detrend_param
+        
+        # Build the Vandermonde matrix for polynomial terms:
+        # Each column corresponds to a power of x, starting with the highest degree.
+        V = np.vander(x, N=deg+1, increasing=False)  # shape: (n_time, deg+1)
+        
+        # Compute the pseudoinverse of the Vandermonde matrix once.
+        V_pinv = np.linalg.pinv(V)  # shape: (deg+1, n_time)
+        
+        # Compute polynomial coefficients for all voxels simultaneously.
+        # ts has shape (n_voxels, n_time) and V_pinv.T has shape (n_time, deg+1)
+        coeffs = ts.dot(V_pinv.T)  # shape: (n_voxels, deg+1)
+        
+        # Evaluate the polynomial trend for each voxel.
+        # V.T has shape (deg+1, n_time), so the product yields (n_voxels, n_time)
+        trend = coeffs.dot(V.T)
+        
+        # Subtract the trend from the original data.
+        ts_mean = np.mean(ts, axis=1, keepdims=True)
+        # remean...
+        detrended_ts = ts - trend + ts_mean
 
-    return ts_detrend
+
+    # DCT-based detrending
+    elif detrend_method == 'dct':
+        # Remove mean for proper DCT operation
+        ts_mean = np.mean(ts, axis=1, keepdims=True)
+        ts_centered = ts - ts_mean
+        
+        # Compute the DCT along the time axis (type II with orthonormal norm)
+        dct_coeffs = dct(ts_centered, type=2, norm='ortho', axis=1)
+        
+        # Zero out the first `detrend_param` coefficients to remove low-frequency trends
+        dct_coeffs[:, :detrend_param] = 0
+        
+        # Reconstruct the detrended time series via inverse DCT and add the mean back
+        detrended_ts = idct(dct_coeffs, type=2, norm='ortho', axis=1) + ts_mean
+    else:
+        raise ValueError("Invalid detrend_method. Choose 'dct' or 'poly'.")
+    
+    # Apply normalization if requested
+    if normalize_method == 'psc':
+        # Note: Assumes that a function `dag_psc` is defined elsewhere.
+        detrended_ts = dag_psc(detrended_ts, baseline_pt)
+    elif normalize_method == 'zscore':
+        detrended_ts = (detrended_ts - np.mean(detrended_ts, axis=1, keepdims=True)) / \
+                        np.std(detrended_ts, axis=1, ddof=1, keepdims=True)
+    elif normalize_method is None:
+        pass  # No normalization
+    else:
+        raise ValueError("Invalid normalize_method. Choose 'psc', 'zscore', or None.")
+    
+    return detrended_ts
 
 def dag_psc(ts_in, baseline_pt=None):
     """
