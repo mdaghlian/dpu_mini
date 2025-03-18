@@ -9,13 +9,26 @@ from dpu_mini.utils import *
 from dpu_mini.fs_tools import dag_serialize_volume_info
 from dpu_mini.plot_functions import *
 
+from tqdm import tqdm
 
 def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
+    gdist_method = kwargs.get('gdist_method', 'pycortex')
     submesh = dag_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
-    geo_dists = gdist.local_gdist_matrix(
-        vertices=submesh['coords'].astype(np.float64),
-        triangles=submesh['faces'].astype(np.int32),
-    )
+    if gdist_method=='pycortex':
+        from dpu_mini.pyctx_cannibalized.surface import Surface
+        sm = Surface(submesh['coords'], submesh['faces'])
+        nvx = len(submesh['coords'])
+        print(nvx)
+        geo_dists = []
+        print('Creating distance by distance matrices')
+        for i in tqdm(range(nvx), desc="Calculating geodesic distances"):
+            geo_dists.append(sm.geodesic_distance(i))
+        geo_dists = np.array(geo_dists)
+    elif gdist_method == 'gdist':
+        geo_dists = gdist.local_gdist_matrix(
+            vertices=submesh['coords'].astype(np.float64),
+            triangles=submesh['faces'].astype(np.int32),
+        )
     return geo_dists
 
 def dag_find_isolated_vx(mesh_info, roi_bool):

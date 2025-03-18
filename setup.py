@@ -6,6 +6,6 @@ def read_requirements():
     
 setup(
     name="dpu_mini",
-    packages=find_packages(),
+    packages=find_packages(include=['dpu_mini', 'dpu_mini.*']),
     install_requires=read_requirements()
 )
