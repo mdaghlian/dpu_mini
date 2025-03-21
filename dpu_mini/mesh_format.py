@@ -21,8 +21,11 @@ def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
         print(nvx)
         geo_dists = []
         print('Creating distance by distance matrices')
+        keys_to_keep = ['m', 'fem']
+        pyc_kwargs = dict(filter(lambda item: item[0] in keys_to_keep, kwargs.items()))
+
         for i in tqdm(range(nvx), desc="Calculating geodesic distances"):
-            geo_dists.append(sm.geodesic_distance(i))
+            geo_dists.append(sm.geodesic_distance(i, **pyc_kwargs))
         geo_dists = np.array(geo_dists)
     elif gdist_method == 'gdist':
         geo_dists = gdist.local_gdist_matrix(
