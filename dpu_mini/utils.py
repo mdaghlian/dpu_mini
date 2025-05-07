@@ -161,9 +161,11 @@ def dag_merge_dicts(a: dict, b: dict, max_depth=3, path=[]):
             merged_dict[key] = b[key]  # If the key is not in 'merged_dict', add it
     return merged_dict    
 
-def dag_get_cores_used():
-    user_name = os.environ['USER']
-    command = f"qstat -u {user_name}"  # Replace with your actual username
+def dag_get_cores_used(**kwargs):
+    command = kwargs.get('command', None)
+    if command is None:
+        user_name = os.environ['USER']
+        command = f"qstat -u {user_name}"  # Replace with your actual username
     output = subprocess.check_output(command, shell=True).decode('utf-8')
     if output == '':
         return 0
@@ -196,6 +198,10 @@ def dag_get_cores_used():
     for line in lines[2:]:
         columns = line.split()
         if columns:
-            cores += int(columns[cores_index])
+            try:
+                cores += int(columns[cores_index])
+            except ValueError:
+                print(f"Error converting {columns[cores_index]} to int")
+                continue
 
     return cores 

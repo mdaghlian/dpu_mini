@@ -13,7 +13,7 @@ from . import subsurface
 from .misc import _memo
 
 
-class Surface(): #exact_geodesic.ExactGeodesicMixin, subsurface.SubsurfaceMixin):
+class Surface(exact_geodesic.ExactGeodesicMixin, subsurface.SubsurfaceMixin):
     """Represents a single cortical hemisphere surface. Can be the white matter surface,
     pial surface, fiducial (mid-cortical) surface, inflated surface, flattened surface,
     etc.

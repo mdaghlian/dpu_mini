@@ -248,6 +248,22 @@ def dag_rapid_slope(x,y):
     slope = numerator / denominator
     return slope
 
+def dag_rapid_slope_intercept(x,y):
+    '''dag_rapid_slope_intercept
+    Calculate the slope and intercept as quickly as possible
+    '''
+    x_mean = x.mean()
+    y_mean = y.mean()
+
+    numerator = np.sum((x - x_mean) * (y - y_mean))
+    denominator = np.sum((x - x_mean) ** 2)
+    # Calculate the slope...
+    slope = numerator / denominator
+    # Calculate the intercept
+    intercept = y_mean - (slope * x_mean)
+    
+    return slope, intercept
+
 def dag_slope_test(x,y, **kwargs):
     '''ncsf_slope
     Calculate the slope, intercept, associated t-stat, and p-values

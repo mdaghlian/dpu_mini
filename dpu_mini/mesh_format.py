@@ -11,6 +11,45 @@ from dpu_mini.plot_functions import *
 
 from tqdm import tqdm
 
+def dag_smooth_data(distances, time_series, fwhm_mm, sigma_units='mm'):
+    """
+    Smooths time series data associated with vertices on a cortical surface
+    using a Gaussian kernel weighted by geodesic distances.
+
+    Args:
+        distances (np.ndarray): A square (n x n) matrix of geodesic
+                                         distances between vertices.
+        time_series (np.ndarray): A (nv x tp) matrix where nv is the number of
+                                  vertices and tp is the number of time points.
+        fwhm_mm (float): The full width at half maximum (FWHM) of the Gaussian
+                         kernel in millimeters.
+        sigma_units (str, optional): The units of the FWHM. Currently only 'mm'
+                                     is supported, where sigma is calculated
+                                     directly from FWHM. Defaults to 'mm'.
+
+    Returns:
+        np.ndarray: A (nv x tp) matrix of the smoothed time series data.
+    """
+    num_vertices = distances.shape[0]
+    num_time_points = time_series.shape[1]
+    smoothed_time_series = np.zeros_like(time_series, dtype=float)
+
+    # Calculate sigma from FWHM
+    if sigma_units == 'mm':
+        sigma_mm = fwhm_mm / (2 * np.sqrt(2 * np.log(2)))
+    else:
+        raise ValueError(f"Unsupported sigma_units: {sigma_units}")
+
+    # Apply smoothing to each vertex's time series
+    for i in range(num_vertices):
+        weights = np.exp(-(distances[i, :] ** 2) / (2 * sigma_mm ** 2))
+        weights /= np.sum(weights)  # Normalize weights
+
+        # Apply weighted average across vertices for each time point
+        smoothed_time_series[i, :] = np.sum(time_series * weights[:, np.newaxis], axis=0)
+
+    return smoothed_time_series
+
 def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
     gdist_method = kwargs.get('gdist_method', 'pycortex')
     submesh = dag_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
@@ -33,6 +72,8 @@ def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
             triangles=submesh['faces'].astype(np.int32),
         )
     return geo_dists
+
+
 
 def dag_find_isolated_vx(mesh_info, roi_bool):
     ''' Find isolated vertices in (connected to no other faces) '''

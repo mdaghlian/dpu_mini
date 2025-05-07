@@ -6,9 +6,14 @@ import tempfile
 import numpy as np
 
 
-# --- NOT GOING TO KEEP VTP
+# --- To 
 # from ..options import config
 # from .. import formats
+import dpu_mini
+
+base_dir = os.path.dirname(os.path.dirname(dpu_mini.__file__))
+vtp_path = os.path.join(base_dir, "VTP_cpp")
+
 
 
 class ExactGeodesicException(Exception):
@@ -55,12 +60,6 @@ class ExactGeodesicMixin(object):
         - vertex : int
             index of vertex to compute geodesic distance from
         """
-
-        if config.has_option('geodesic', 'vtp_path'):
-            vtp_path = config.get('geodesic', 'vtp_path')
-        else:
-            raise ExactGeodesicException('must set config["geodesic"]["vtp_path"]')
-
         if not os.path.exists(vtp_path):
             raise ExactGeodesicException('vtp_path does not exist: ' + str(vtp_path))
 
@@ -69,7 +68,7 @@ class ExactGeodesicMixin(object):
         f_output, tmp_output_path = tempfile.mkstemp()
 
         # create object file
-        formats.write_obj(tmp_obj_path, self.pts, self.polys) # ** HERE MARCUS **
+        write_obj(tmp_obj_path, self.pts, self.polys) # ** HERE MARCUS **
 
         # run algorithm
         cmd = [vtp_path, '-m', tmp_obj_path, '-s', str(vertex), '-o', tmp_output_path]
@@ -87,3 +86,19 @@ class ExactGeodesicMixin(object):
         os.close(f_output)
 
         return distances
+
+def write_obj(filename, pts, polys, colors=None):
+    with open(filename, 'w') as fp:
+        fp.write("o Object\n")
+        
+        if colors is not None:
+            for pt, c in zip(pts, colors):
+                fp.write("v {:.6f} {:.6f} {:.6f} {:.6f} {:.6f} {:.6f}\n".format(pt[0], pt[1], pt[2], c[0], c[1], c[2]))
+        else:
+            for pt in pts:
+                fp.write("v {:.6f} {:.6f} {:.6f}\n".format(*pt))
+        
+        fp.write("s off\n")
+        
+        for f in polys:
+            fp.write("f {} {} {}\n".format(*(f + 1)))
