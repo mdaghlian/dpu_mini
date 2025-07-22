@@ -477,7 +477,6 @@ class GenMeshMaker(FSMaker):
             'lh': vx_to_include[:self.n_vx['lh']],
             'rh': vx_to_include[self.n_vx['lh']:]
         }
-
         cut_box = kwargs.get('cut_box', False)                        
         
         hemi_pts = {}
@@ -512,7 +511,7 @@ class GenMeshMaker(FSMaker):
                 mesh_info=self.mesh_info['inflated'][hemi], 
                 vx_bool=hemi_kwargs['vx_to_include'], 
                 morph=morph)
-            hemi_kwargs['centre_bool'] = centre_bool_hemi[hemi]
+            hemi_kwargs['centre_bool'] = hemi_kwargs['vx_to_include'] #centre_bool_hemi[hemi]
             pts,polys,_ = dag_flatten(
                 mesh_info=self.mesh_info[hemi_project][hemi], 
                 method=method,
@@ -636,7 +635,26 @@ class GenMeshMaker(FSMaker):
 
     #endregion FLAT FUNCTIONS
 
+    def return_sm(self, mask, hemi, **kwargs):
+        surf = kwargs.get('surf', 'pial')        
+        if mask.shape[0]==self.total_n_vx:
+            if hemi=='lh':
+                mask = mask[:self.n_vx['lh']]
+            elif hemi == 'rh':
+                mask = mask[self.n_vx['lh']:]
+            else:
+                ValueError 
 
+        sm = dag_submesh_from_mesh(
+            mesh_info=self.mesh_info[surf][hemi], 
+            submesh_bool=mask, **kwargs)
+        return sm
+
+    def return_pyc_sm(self, mask, hemi, **kwargs):
+        sm = self.return_sm(mask, hemi, **kwargs)
+        from dpu_mini.pyctx_cannibalized.surface import Surface        
+        sm = Surface(sm['coords'], sm['faces'])
+        return sm
 
 
 

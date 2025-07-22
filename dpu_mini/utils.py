@@ -16,6 +16,30 @@ def dag_str2file(filename, txt):
     file2write = open(filename, 'w')
     file2write.write(txt)
     file2write.close()
+def dag_hyphen_parse(str_prefix, str_in):
+    '''dag_hyphen_parse
+    checks whether a string has a prefix attached.
+    Useful for many BIDS format stuff, and when passing arguments on a lot 
+    (sometimes it is not clear whether the prefix will be present or not...)
+
+    E.g., I want to make sure that string "task_name" has the format "task-A" 
+    part_task_name = "A"
+    full_task_name = "task-A"
+    
+    dag_hyphen_parse("task", part_task_name)
+    dag_hyphen_parse("task", full_task_name)
+
+    Both output -> "task-A"
+    
+    '''
+    if str_prefix in str_in:
+        str_out = str_in
+    else: 
+        str_out = f'{str_prefix}-{str_in}'
+    # Check for multiple hyphen
+    while '--' in str_out:
+        str_out = str_out.replace('--', '-')
+    return str_out
 
 def dag_find_file_in_folder(filt, path, return_msg='error', exclude=None, recursive=False, file_limit=9999, inclusive_or=False):
     """get_file_from_substring

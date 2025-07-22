@@ -465,3 +465,91 @@ def dag_get_pos_change(old_x, old_y, new_x, new_y):
     dy = new_y - old_y
     dsize = np.sqrt(dx**2 + dy**2)
     return dsize
+
+
+
+import numpy as np
+
+
+def dag_fill_screen_params(params):
+    """
+    Given a dict with some of the following keys:
+      width_px, width_cm, width_deg,
+      height_px, height_cm, height_deg,
+      pix_per_cm, pix_per_deg,
+      screen_distance_cm,
+      aspect_ratio (w/h),
+    fills in as many missing ones as possible and returns a new dict.
+
+    All angles are in degrees.
+    """
+    # copy input to avoid side-effects
+    p = params.copy()
+
+    # helper to compute width_cm from width_deg
+    def deg_to_cm(deg, dist):
+        return 2 * dist * np.tan(np.deg2rad(deg) / 2)
+
+    # cm to deg
+    def cm_to_deg(cm, dist):
+        return np.rad2deg(2 * np.arctan(cm / (2 * dist)))
+
+    # iterative inference
+    prev_keys = set()
+    while set(p.keys()) != prev_keys:
+        prev_keys = set(p.keys())
+
+        # aspect_ratio
+        if 'aspect_ratio' not in p:
+            if 'width_cm' in p and 'height_cm' in p:
+                p['aspect_ratio'] = p['width_cm'] / p['height_cm']
+            elif 'width_px' in p and 'height_px' in p:
+                p['aspect_ratio'] = p['width_px'] / p['height_px']
+
+        # height_cm from width_cm & aspect
+        if 'height_cm' not in p and 'width_cm' in p and 'aspect_ratio' in p:
+            p['height_cm'] = p['width_cm'] / p['aspect_ratio']
+        if 'width_cm' not in p and 'height_cm' in p and 'aspect_ratio' in p:
+            p['width_cm'] = p['height_cm'] * p['aspect_ratio']
+
+        # px/cm conversion
+        if 'pix_per_cm' not in p and 'width_px' in p and 'width_cm' in p:
+            p['pix_per_cm'] = p['width_px'] / p['width_cm']
+        if 'width_px' not in p and 'pix_per_cm' in p and 'width_cm' in p:
+            p['width_px'] = int(round(p['pix_per_cm'] * p['width_cm']))
+        if 'height_px' not in p and 'pix_per_cm' in p and 'height_cm' in p:
+            p['height_px'] = int(round(p['pix_per_cm'] * p['height_cm']))
+
+        # px/deg conversion
+        if 'pix_per_deg' not in p and 'width_px' in p and 'width_deg' in p:
+            p['pix_per_deg'] = p['width_px'] / p['width_deg']
+        if 'width_px' not in p and 'pix_per_deg' in p and 'width_deg' in p:
+            p['width_px'] = int(round(p['pix_per_deg'] * p['width_deg']))
+
+        # deg<->cm using distance
+        if 'screen_distance_cm' in p:
+            d = p['screen_distance_cm']
+            # width_deg from width_cm
+            if 'width_deg' not in p and 'width_cm' in p:
+                p['width_deg'] = cm_to_deg(p['width_cm'], d)
+            # width_cm from width_deg
+            if 'width_cm' not in p and 'width_deg' in p:
+                p['width_cm'] = deg_to_cm(p['width_deg'], d)
+            # height_deg
+            if 'height_deg' not in p and 'height_cm' in p:
+                p['height_deg'] = cm_to_deg(p['height_cm'], d)
+            if 'height_cm' not in p and 'height_deg' in p:
+                p['height_cm'] = deg_to_cm(p['height_deg'], d)
+
+        # pix_per_deg from pix_per_cm
+        if 'pix_per_deg' not in p and 'pix_per_cm' in p and 'screen_distance_cm' in p:
+            # derive via cm/deg
+            if 'width_deg' in p:
+                # prefer width
+                p['pix_per_deg'] = p['pix_per_cm'] * (p['width_cm'] / p['width_deg'])
+            else:
+                # compute average cm_per_deg
+                cm_per_deg = deg_to_cm(1, p['screen_distance_cm'])
+                p['pix_per_deg'] = p['pix_per_cm'] * cm_per_deg
+
+    return p
