@@ -1,7 +1,7 @@
 import numpy as np  
 import matplotlib.pyplot as plt
 import os
-import gdist
+# import gdist
 import struct
 opj = os.path.join
 
@@ -67,6 +67,7 @@ def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
             geo_dists.append(sm.geodesic_distance(i, **pyc_kwargs))
         geo_dists = np.array(geo_dists)
     elif gdist_method == 'gdist':
+        import gdist
         geo_dists = gdist.local_gdist_matrix(
             vertices=submesh['coords'].astype(np.float64),
             triangles=submesh['faces'].astype(np.int32),

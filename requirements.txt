@@ -3,6 +3,6 @@ numpy
 seaborn
 scipy
 regex
-gdist
+# gdist
 PyYAML
 pandas
