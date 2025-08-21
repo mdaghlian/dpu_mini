@@ -446,6 +446,43 @@ def dag_sph2flat(coords, **kwargs):
 
     return lon, lat
 
+from sklearn.manifold import MDS
+import scipy.sparse.csgraph as csgraph
+
+def dag_lbo_flatten(mesh_info):
+    # build adjacency‐graph
+    from dpu_mini.pyctx_cannibalized.surface import Surface
+    sm = Surface(mesh_info['coords'], mesh_info['faces'])
+    B, D, W, V = sm.laplace_operator    
+    
+    # npt = W.shape[0]
+    # import scipy as sp
+    # Dinv = sp.sparse.dia_matrix(
+    #     (D**-1, [0]), (npt, npt)).tocsr()  # construct Dinv
+    # L = Dinv.dot((V-W))
+    # eigenvalues, eigenvectors = sp.sparse.linalg.eigs(
+    #     -L, k=3, which="LM", sigma=0)
+    # u = eigenvectors[:,1].real
+    # v = eigenvectors[:,2].real
+    # return u,v
+    A = V - W
+    method='eigenmap'
+    from scipy.sparse.linalg import expm
+    import scipy.sparse.linalg as spla
+    if method == 'eigenmap':
+        vals, vecs = spla.eigsh(A, k=3, M=B, which='SM')
+        u2, u3 = vecs[:,1], vecs[:,2]
+    elif method == 'diffusion':
+        L = D.power(-1) @ A
+        K = expm(-t * L)
+        vals, vecs = spla.eigs(K, k=3, which='LR')
+        idx = np.argsort(vals)[::-1][1:3]
+        u2, u3 = vecs[:, idx[0]].real, vecs[:, idx[1]].real
+    else:
+        raise ValueError(f"Unknown method {method}")
+
+    return u2, u3
+
 def dag_igl_flatten(mesh_info, **kwargs):
     '''Flatten a sphere to 2D
     This is a probably a bad way to flatten the cortex
@@ -567,6 +604,8 @@ def dag_flatten(mesh_info, **kwargs):
             f_to_include = face_to_include_IGL
         except:
             p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
+    elif method=='lbo':
+        p1, p2 = dag_lbo_flatten(mesh_info)
 
     # find relative scale...
     flat_info['x'] = p1 #- p1.mean()# Demean

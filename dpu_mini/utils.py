@@ -213,7 +213,7 @@ def dag_get_cores_used(**kwargs):
 
         lines = output.strip().split('\n')
         header = lines[0].split()    
-        if count > 10:
+        if count > 50:
             print('bloop')
             break
 

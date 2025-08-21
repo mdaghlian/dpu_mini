@@ -609,13 +609,21 @@ class GenMeshMaker(FSMaker):
                     continue
                 x = mpts[hemi][roi_dict['border_vx'],0]
                 y = mpts[hemi][roi_dict['border_vx'],1]
+                default_settings = {
+                        'marker': '.',
+                        'color': 'k',
+                        'linestyle': 'None',  
+                        'markersize': 0.8,
+                    }
+                default_settings.update(kwargs.get('roi_line', {}))
                 ax.plot(
                     x,y, 
                     # roi_dict['border_coords'][:,0],
                     # roi_dict['border_coords'][:,1],
-                    '.',
-                    color='k',
-                    linewidth=2, markersize=.8,
+                    # '.',
+                    # color='k',
+                    # linewidth=2, markersize=.8,
+                    **default_settings,
                     label=roi_dict['roi'] if roi_dict['first_instance'] else None,
                 )
         # Add color bar
