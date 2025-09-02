@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# A simple script to open a FreeSurfer subject in freeview.
+# It loads T1, T2 (if available), and the pial and white surfaces.
+
+# Initialize a variable to store the subject ID
+SUBJECT_ID=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --sub)
+      SUBJECT_ID="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# Check if a subject ID was provided
+if [ -z "$SUBJECT_ID" ]; then
+    echo "Usage: $0 --sub <subject_id>"
+    echo "Example: $0 --sub ctrl05 or --sub sub-ctrl05"    
+    exit 1
+fi
+
+# Clean up the subject ID to remove potential 'sub-' prefix
+# This handles both 'ctrl05' and 'sub-ctrl05'
+SUBJECT_ID=${SUBJECT_ID/sub-/}
+SUBJECT_ID="sub-${SUBJECT_ID}"
+
+# Set the SUBJECTS_DIR environment variable if not already set
+SUBJECTS_DIR=${SUBJECTS_DIR:-$HOME/freesurfer/subjects}
+
+# Define paths to key files
+DIR_MRI="$SUBJECTS_DIR/$SUBJECT_ID/mri"
+DIR_SURF="$SUBJECTS_DIR/$SUBJECT_ID/surf"
+T1_FILE="$DIR_MRI/orig.mgz"
+OTHER_VOLS=("brainmask" "rawavg" "T2" )
+
+# Check if the subject directory exists
+if [ ! -d "$SUBJECTS_DIR/$SUBJECT_ID" ]; then
+    echo "Error: Subject directory not found for $SUBJECT_ID in $SUBJECTS_DIR"
+    exit 1
+fi
+
+# Build the base freeview command
+freeview_cmd="freeview -v $T1_FILE"
+
+for file in "${OTHER_VOLS[@]}"; do
+    FILE_PATH="$DIR_MRI/${file}.mgz"
+    if [ -f "$FILE_PATH" ]; then
+        freeview_cmd+=" $FILE_PATH"
+    fi
+done
+
+# Add surfaces with specified colors
+freeview_cmd+=" -f $DIR_SURF/lh.pial:edgecolor=blue \
+$DIR_SURF/rh.pial:edgecolor=blue \
+$DIR_SURF/lh.white:edgecolor=yellow \
+$DIR_SURF/rh.white:edgecolor=yellow"
+
+# Execute the command
+echo "Opening subject $SUBJECT_ID in freeview..."
+eval $freeview_cmd

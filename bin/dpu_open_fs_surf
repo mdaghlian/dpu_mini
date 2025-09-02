@@ -1,0 +1,160 @@
+#!/usr/bin/env python
+#$ -j Y
+#$ -cwd
+#$ -V
+
+
+import sys
+import os
+opj = os.path.join
+
+
+import numpy as np
+
+from dpu_mini.utils import dag_find_file_in_folder, dag_arg_checker
+from dpu_mini.fs_tools import FSMaker
+
+
+
+def main(argv):
+    '''
+    ---------------------------
+    Open the freesurfer surfaces for a subject
+
+    Args:
+        --sub               subject number
+        --to_show           <surf_names>...
+        --find              comma separated list of strings to search for in the surface names
+        --exclude           comma separated list of strings to exclude from the search
+        --custom_only       only search in the custom surfaces
+        --roi_list          list of rois, or roi patterns to load
+        --hemi_list         list of hemispheres to load (optional default is both)
+        ...
+        --help/-h          help
+
+    
+    Example:
+
+
+    '''
+    # Load the fitting settings, add in the new info
+    # [1] Setup parameters:
+    sub = None
+    to_show = []
+    custom_only = False
+    print_overlay = False
+    do_search = False
+    search_incl = []
+    search_excl = []
+    inclusive_or = False
+    fs_dir=os.environ['SUBJECTS_DIR']
+    kwargs = {}
+    for i,arg in enumerate(argv):
+        if '--sub' in arg:
+            sub = f'sub-{argv[i+1]}'
+        elif '--print_overlay' in arg:
+            print_overlay = True
+
+        elif '--to_show' in arg:
+            to_show = argv[i+1]
+            if ',' in to_show:
+                to_show = to_show.split(',')
+            if not isinstance(to_show, list):
+                to_show = [to_show]
+        elif '--find' in arg:
+            do_search = True
+            search_incl = argv[i+1]
+            if ',' in search_incl:
+                search_incl = search_incl.split(',')
+            if not isinstance(search_incl, list):
+                search_incl = [search_incl]
+        elif '--exclude' in arg:
+            search_excl = argv[i+1]
+            if ',' in search_excl:
+                search_excl = search_excl.split(',')
+            if not isinstance(search_excl, list):
+                search_excl = [search_excl]
+        elif '--custom_only' in arg:
+            custom_only = True
+        elif '--fs_dir' in arg:
+            fs_dir = argv[i+1]
+        elif '--inclusive_or' in arg:            
+            inclusive_or=True
+        elif ('-h' == arg) or ('--help' == arg):
+            print(main.__doc__)
+            sys.exit()
+
+            
+        elif '--' in arg: # ********** ARBITRARY KWARGS **********
+            # If argv[i] is an argument, then argv[i+1] is its value
+            this_kwarg_value = dag_arg_checker(argv, i+1)
+            # Add to kwargs
+            this_kwarg = arg.replace('--','')
+            kwargs[this_kwarg] = this_kwarg_value
+
+
+    # [3] Check the arguments
+    if sub is None:
+        raise ValueError('Subject number not specified')
+    
+    # Make fs object
+    fs = FSMaker(sub, fs_dir=fs_dir)
+    
+    if print_overlay:
+        if to_show is []:
+            surf_name = 'curv'
+        overlay_str = fs.get_overlay_str(
+            surf_name=surf_name,
+            **kwargs
+        )
+        print(overlay_str)
+        return
+
+    if do_search:
+        if custom_only:
+            search_dir = fs.custom_surf_dir
+        else:
+            search_dir = fs.sub_surf_dir
+        # Find the surfaces
+        surf_list = dag_find_file_in_folder(
+            filt = search_incl,
+            path=search_dir,
+            exclude = search_excl + ['rh.', 'overlay', '.png'], # exclude right hemisphere in search to avoid duplicates
+            recursive=True,
+            inclusive_or=inclusive_or,
+            # return_msg=None
+        )
+        if isinstance(surf_list, str):
+            surf_list = [surf_list]
+
+        surf_list = [surf.split('/')[-1] for surf in surf_list]
+        surf_list = [surf.replace('lh.', '') for surf in surf_list]
+
+        for i,surf in enumerate(surf_list):
+            print(i, surf)
+        if len(surf_list)==0: 
+            print('No surfaces found')
+            return
+        elif len(surf_list)==1:
+            to_show += surf_list
+        else:
+            print('Enter the number of the surface you want to open:')        
+            surf_num = input()
+            if 'all' in surf_num:
+                to_show += surf_list
+            elif ',' in surf_num:
+                surf_num = surf_num.split(',')
+                surf_num = [int(i) for i in surf_num]
+                to_show += [surf_list[i] for i in surf_num]
+            elif surf_num.isdigit():
+                surf_num = int(surf_num)
+                to_show += [surf_list[surf_num]]
+            else:
+                print('Invalid input')
+
+    fs.open_fs_surface(to_show, **kwargs)
+
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])    

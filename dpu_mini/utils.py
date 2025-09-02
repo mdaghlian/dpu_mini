@@ -16,6 +16,54 @@ def dag_str2file(filename, txt):
     file2write = open(filename, 'w')
     file2write.write(txt)
     file2write.close()
+def dag_arg_checker(arg2check, idx=None):
+    '''arg2check is a string, check if it's a number, return the number if so, otherwise return the string
+    Should be able to deal with negative numbers too
+    '''
+    if idx is not None:
+        try: 
+            arg2check = arg2check[idx]
+        except:
+            print(f'Index {idx} not found in {arg2check}')
+            print('assuming it is a flag to say something is TRUE --flag ')
+            return True
+        if arg2check == '':
+            print(f'Index {idx} is empty in {arg2check}')
+            print('assuming it is a flag to say something is TRUE --flag ')
+            return True
+        elif '--' in arg2check:
+            print(f'Index {idx} is a flag in {arg2check}')
+            return True              
+
+            
+    # [1] Check if it is a list of arguments
+    if ',' in arg2check:
+        arg2check_list = arg2check.split(',')
+        arg_out = [dag_arg_checker(i) for i in arg2check_list]
+        return arg_out
+    # [2] Check for common strings
+    if arg2check.lower() == 'true':
+        return True
+    elif arg2check.lower() == 'false':
+        return False
+    elif arg2check.lower() == 'none':
+        return None
+    
+    # [3] Check for numbers
+    if arg2check[0] == '-':
+        arg_valence = -1
+        arg2check = arg2check[1:]
+    else:
+        arg_valence = 1
+
+    if arg2check.isdigit():
+        arg_out = arg_valence * int(arg2check)
+    elif arg2check.replace('.','',1).isdigit():
+        arg_out = arg_valence * float(arg2check)                
+    else:
+        arg_out = arg2check   
+
+    return arg_out
 def dag_hyphen_parse(str_prefix, str_in):
     '''dag_hyphen_parse
     checks whether a string has a prefix attached.
