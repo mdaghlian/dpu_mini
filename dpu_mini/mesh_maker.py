@@ -567,6 +567,7 @@ class GenMeshMaker(FSMaker):
             fig, ax = plt.subplots(1,1, figsize=(10,10))
         else:
             fig = ax.get_figure()
+        colorbar=kwargs.pop('colorbar', True)
 
         disp_rgb, cmap_dict = self.return_display_rgb(
             data=data, split_hemi=True, return_cmap_dict=True, **kwargs
@@ -627,11 +628,12 @@ class GenMeshMaker(FSMaker):
                     label=roi_dict['roi'] if roi_dict['first_instance'] else None,
                 )
         # Add color bar
-        norm = mpl.colors.Normalize(vmin=cmap_dict['vmin'], vmax=cmap_dict['vmax'])
-        cmap = dag_get_cmap(cmap_dict['cmap'])
-        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-        sm.set_array([])
-        fig.colorbar(sm, ax=ax, orientation='horizontal', label=surf_name)
+        if colorbar:
+            norm = mpl.colors.Normalize(vmin=cmap_dict['vmin'], vmax=cmap_dict['vmax'])
+            cmap = dag_get_cmap(cmap_dict['cmap'])
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            sm.set_array([])
+            fig.colorbar(sm, ax=ax, orientation='horizontal', label=surf_name)
         ax.axis('off')
         ax.set_aspect('equal')
         return cmap_dict

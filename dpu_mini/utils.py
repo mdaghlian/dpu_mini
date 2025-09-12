@@ -4,6 +4,8 @@ import string
 import random
 import subprocess
 import time
+from collections import defaultdict
+
 opj = os.path.join
 
 def dag_random_string(length):
@@ -211,6 +213,9 @@ def dag_file_name_check(file_name, filt_incl, filt_excl, inclusive=False):
     if filt_excl is not None and any(string in file_name for string in filt_excl):
         file_match = False
     return file_match
+
+rdict = lambda: defaultdict(rdict)
+
 
 def dag_merge_dicts(a: dict, b: dict, max_depth=3, path=[]):
     '''
