@@ -45,9 +45,31 @@ class FSMaker(object):
             os.mkdir(self.custom_surf_dir)        
 
         exclude_as_nan = kwargs.get("exclude_as_nan", False) # Set masked values to NAN
-        data_mask = kwargs.get('data_mask', np.ones_like(data, dtype=bool))
-        # Load colormap properties: (cmap, vmin, vmax)
-        # vmin = kwargs.get('vmin', np.percentile(data[data_mask], 10))
+        # Load mask for data to be plotted on surface
+        data_mask = kwargs.get('data_mask', np.ones(data.shape[0], dtype=bool))
+        data_sub_mask = kwargs.get('data_sub_mask', None)        
+        data_alpha = kwargs.get('data_alpha', np.ones(data.shape[0]))
+        clear_lower = kwargs.get('clear_lower', False)
+        clear_upper = kwargs.get('clear_upper', False)
+        
+        if data_sub_mask is not None:
+            if len(data.shape)==1:
+                d_full = np.zeros(self.total_n_vx)
+                d_full[data_sub_mask] = data
+            else:
+                d_full = np.zeros((self.total_n_vx, data.shape[-1]))
+                d_full[data_sub_mask,:] = data
+
+            data = d_full
+            #
+            dm_full = np.zeros(self.total_n_vx, dtype=bool)
+            dm_full[data_sub_mask] = data_mask
+            data_mask = dm_full
+            #      
+        # data_mask = kwargs.get('data_mask', np.ones_like(data, dtype=bool))
+        # data_sub_mask = kwargs.get('data_sub_mask', None)        
+        # # Load colormap properties: (cmap, vmin, vmax)
+        # # vmin = kwargs.get('vmin', np.percentile(data[data_mask], 10))
         vmin = kwargs.get('vmin', np.nanmin(data[data_mask]))
         # Get the overlay custom str and overlay to save...
         overlay_custom_str, overlay_to_save = dag_make_overlay_str(masked_data=data[data_mask], **kwargs)

@@ -4,7 +4,10 @@ import string
 import random
 import subprocess
 import time
+import numpy as np
 from collections import defaultdict
+from scipy import io, interpolate
+from scipy.ndimage import zoom
 
 opj = os.path.join
 
@@ -282,3 +285,147 @@ def dag_get_cores_used(**kwargs):
                 continue
 
     return cores 
+
+def find_dict_values(d, target_key):
+    """
+    Recursively finds all values for a given key in a nested dictionary.
+    
+    Args:
+        d (dict): The dictionary to search.
+        target_key: The key to find.
+
+    Returns:
+        list: A list of all values associated with the target key.
+    """
+    for key, value in d.items():
+        if key == target_key:
+            return value        
+        # If the value is a dictionary, recurse
+        elif isinstance(value, dict):
+            return find_dict_values(value, target_key)
+        # This handles lists that might contain dictionaries
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    return find_dict_values(item, target_key)
+    return None
+
+def resample2d(array: np.ndarray, new_size: int, kind: str = 'linear') -> np.ndarray:
+    """
+    Resample a 2D or 3D array to (new_size, new_size) using linear interpolation.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Input array of shape (H, W) or (H, W, C).
+    new_size : int
+        Desired output height and width.
+    kind : {'linear'}, optional
+        Only 'linear' is supported (default).
+
+    Returns
+    -------
+    np.ndarray
+        Resampled array of shape (new_size, new_size) or
+        (new_size, new_size, C) for 3D input.
+    """
+    if kind != 'linear':
+        raise ValueError("Only linear interpolation is supported.")
+
+    # compute zoom factors for height and width
+    zoom_y = new_size / array.shape[0]
+    zoom_x = new_size / array.shape[1]
+
+    if array.ndim == 2:
+        # single-channel
+        return zoom(array, (zoom_y, zoom_x), order=1)
+    elif array.ndim == 3:
+        # preserve channel axis
+        return zoom(array, (zoom_y, zoom_x, 1), order=1)
+    else:
+        raise ValueError("Input must be 2D or 3D.")
+
+def get_prfdesign(screenshot_path, n_pix=100, dm_edges_clipping=[0,0,0,0]):
+    """
+    get_prfdesign
+
+    Basically Marco's gist, but then incorporated in the repo. It takes the directory of screenshots and creates a vis_design.mat file, telling pRFpy at what point are certain stimulus was presented.
+
+    Parameters
+    ----------
+    screenshot_path: str
+        string describing the path to the directory with png-files
+    n_pix: int
+        size of the design matrix (basically resolution). The larger the number, the more demanding for the CPU. It's best to have some value which can be divided with 1080, as this is easier to downsample. Default is 40, but 270 seems to be a good trade-off between resolution and CPU-demands
+    dm_edges_clipping: list, dict, optional
+        people don't always see the entirety of the screen so it's important to check what the subject can actually see by showing them the cross of for instance the BOLD-screen (the matlab one, not the linux one) and clip the image accordingly. This is a list of 4 values, which are the number of pixels to clip from the left, right, top and bottom of the image. Default is [0,0,0,0], which means no clipping. Negative values will be set to 0.
+
+    Returns
+    ----------
+    numpy.ndarray
+        array with shape <n_pix,n_pix,timepoints> representing a binary paradigm
+
+    Example
+    ----------
+    >>> dm = get_prfdesign('path/to/dir/with/pngs', n_pix=270, dm_edges_clipping=[6,1,0,1])
+    """
+
+    image_list = os.listdir(screenshot_path)
+
+    # get first image to get screen size
+    img = (255*mpimg.imread(opj(screenshot_path, image_list[0]))).astype('int')
+
+    # there is one more MR image than screenshot
+    design_matrix = np.zeros((img.shape[0], img.shape[0], 1+len(image_list)))
+
+    for image_file in image_list:
+
+        # assuming last three numbers before .png are the screenshot number
+        img_number = int(image_file[-7:-4])-1
+
+        # subtract one to start from zero
+        img = (255*mpimg.imread(opj(screenshot_path, image_file))).astype('int')
+
+        # make it square
+        if img.shape[0] != img.shape[1]:
+            offset = int((img.shape[1]-img.shape[0])/2)
+            img = img[:, offset:(offset+img.shape[0])]
+        cross = np.zeros(img.shape[0:2])
+        cross[np.where(((img[...,0] == 0) & (
+            img[...,1] == 0)) | ((img[...,0] == 255) & (img[...,1] == 255)))] = 1
+        cross[np.where(((img[...,0] == img[...,1]) & (
+            img[...,1] == img[...,2]) & (img[...,0] != 127)))] = 1
+        bar = (np.sum(img, axis=-1) == 384)*1.0
+        bar += cross
+        design_matrix[...,img_number] = bar == 1.0
+        # # binarize image into dm matrix
+        # # assumes: standard RGB255 format; only colors present in image are black, white, grey, red, green.
+        # design_matrix[...,img_number][np.where(((img[...,0] == 0) & (
+        #     img[...,1] == 0)) | ((img[...,0] == 255) & (img[...,1] == 255)))] = 1
+
+        # design_matrix[...,img_number][np.where(((img[...,0] == img[...,1]) & (
+        #     img[...,1] == img[...,2]) & (img[...,0] != 127)))] = 1
+
+    #clipping edges; top, bottom, left, right
+    if isinstance(dm_edges_clipping, dict):
+        dm_edges_clipping = [
+            dm_edges_clipping['top'],
+            dm_edges_clipping['bottom'],
+            dm_edges_clipping['left'],
+            dm_edges_clipping['right']]
+
+    # ensure absolute values; should be a list by now anyway
+    dm_edges_clipping = [abs(ele) for ele in dm_edges_clipping]
+
+    design_matrix[:dm_edges_clipping[0], :, :] = 0
+    design_matrix[(design_matrix.shape[0]-dm_edges_clipping[1]):, :, :] = 0
+    design_matrix[:, :dm_edges_clipping[2], :] = 0
+    design_matrix[:, (design_matrix.shape[0]-dm_edges_clipping[3]):, :] = 0
+
+    # downsample (resample2d can also deal with 3D input)
+    if n_pix != design_matrix.shape[0]:
+        dm_resampled = resample2d(design_matrix, n_pix)
+        dm_resampled[dm_resampled<0.9] = 0
+        return dm_resampled
+    else:
+        return design_matrix

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Script to run 'tail blah.txt' every 10 seconds.
+# Press Ctrl+C to stop the script.
+
+LOG_FILE=$1
+INTERVAL=10
+
+echo "Starting log watch for: $LOG_FILE"
+echo "Refresh interval: $INTERVAL seconds."
+echo "-------------------------------------"
+
+# Start the infinite loop
+while true
+do
+    # Print a timestamp before showing the content
+    echo "--- Content update at $(date) ---"
+
+    # Run the command to display the end of the file
+    tail "$LOG_FILE"
+
+    # Wait for the specified interval before looping again
+    sleep "$INTERVAL"
+done

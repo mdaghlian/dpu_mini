@@ -49,6 +49,27 @@ def dag_get_corr(a, b):
     corr = np.corrcoef(a,b)[0,1]
     return corr
 
+def dag_row_wise_corr(arr1, arr2):
+    """
+    Calculates the row-wise correlation between two NumPy arrays of the same shape.
+
+    Args:
+        arr1 (np.ndarray): The first array of shape (n_voxels, n_timepoints).
+        arr2 (np.ndarray): The second array of shape (n_voxels, n_timepoints).
+
+    Returns:
+        np.ndarray: A 1D array of correlation coefficients, one for each row.
+    """
+    # Center the arrays by subtracting the mean of each row
+    arr1_centered = arr1 - arr1.mean(axis=1, keepdims=True)
+    arr2_centered = arr2 - arr2.mean(axis=1, keepdims=True)
+
+    # Calculate the numerator (covariance) and denominator (product of standard deviations)
+    numerator = np.sum(arr1_centered * arr2_centered, axis=1)
+    denominator = np.sqrt(np.sum(arr1_centered**2, axis=1) * np.sum(arr2_centered**2, axis=1))
+
+    # Return the correlation coefficients
+    return numerator / denominator
 
 def dag_detrending(ts, detrend_method='poly', detrend_param=0, normalize_method='psc', baseline_pt=None):
     """

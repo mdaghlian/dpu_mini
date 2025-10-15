@@ -665,6 +665,13 @@ def dag_is_contiguous(mesh_info, vx_bool):
     vx_border = dag_find_border_vx_in_order(roi_bool=vx_bool, mesh_info=mesh_info)
     return vx_border
 
+def dag_morph_roi(gm, roi_bool, morph=0, **kwargs):
+    rb_L = roi_bool[:gm.n_vx['lh']]
+    rb_R = roi_bool[gm.n_vx['lh']:]
+    rb_L = dag_mesh_morph(gm.mesh_info['pial']['lh'], rb_L, morph=morph)
+    rb_R = dag_mesh_morph(gm.mesh_info['pial']['rh'], rb_R, morph=morph)
+    roi_morphed = np.concatenate([rb_L, rb_R])
+    return roi_morphed
 
 def dag_submesh_from_mesh(mesh_info, submesh_bool, **kwargs):
     '''Create a submesh from a mesh

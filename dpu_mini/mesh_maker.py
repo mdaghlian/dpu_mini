@@ -86,15 +86,20 @@ class GenMeshMaker(FSMaker):
         return_cmap_dict = kwargs.get('return_cmap_dict', False)
         under_surf = kwargs.get('under_surf', 'curv')
         # Load mask for data to be plotted on surface
-        data_mask = kwargs.get('data_mask', np.ones_like(data, dtype=bool))
+        data_mask = kwargs.get('data_mask', np.ones(data.shape[0], dtype=bool))
         data_sub_mask = kwargs.get('data_sub_mask', None)        
-        data_alpha = kwargs.get('data_alpha', np.ones_like(data))
+        data_alpha = kwargs.get('data_alpha', np.ones(data.shape[0]))
         clear_lower = kwargs.get('clear_lower', False)
         clear_upper = kwargs.get('clear_upper', False)
         
         if data_sub_mask is not None:
-            d_full = np.zeros(self.total_n_vx)
-            d_full[data_sub_mask] = data
+            if len(data.shape)==1:
+                d_full = np.zeros(self.total_n_vx)
+                d_full[data_sub_mask] = data
+            else:
+                d_full = np.zeros((self.total_n_vx, data.shape[-1]))
+                d_full[data_sub_mask,:] = data
+
             data = d_full
             #
             dm_full = np.zeros(self.total_n_vx, dtype=bool)
@@ -182,6 +187,12 @@ class GenMeshMaker(FSMaker):
         Simple mapping from values to colors
         '''                        
         # Create rgb values mapping from data to cmap
+        if len(data.shape)!=1:
+            if data.shape[1] == 3:
+                # Assume input is Nx3, add a 4th column of ones
+                return np.hstack([data, np.ones((data.shape[0], 1))])
+            elif data.shape[1]==4:
+                return data
         try: 
             data_cmap = dag_get_cmap(cmap)  
         except:
@@ -637,6 +648,117 @@ class GenMeshMaker(FSMaker):
         ax.axis('off')
         ax.set_aspect('equal')
         return cmap_dict
+    
+    def t3d_mpl(self, **kwargs):
+        '''Plot using matplotlib 
+        '''
+        data=kwargs.pop('data', None)
+        surf_name = kwargs.pop('surf_name', 'data')
+        rot_angles = kwargs.pop('rot_angles', None)
+        roi_list = kwargs.pop('roi_list', [])
+        if not isinstance(roi_list, list):
+            roi_list = [roi_list]
+        mesh_name = kwargs.pop('mesh_name', 'inflated')
+        try:
+            self.get_mesh_info(mesh_name)
+        except:
+            self.add_flat_to_mesh_info(mesh_name=mesh_name)
+        hemi_list = kwargs.get('hemi_list', ['lh', 'rh'])
+        ax = kwargs.pop('ax', None)
+        if ax is None:
+            fig = plt.figure(figsize=(10,10))
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            fig = ax.get_figure()
+            # TODO make ax projection 3d
+
+        colorbar=kwargs.pop('colorbar', True)
+
+        disp_rgb, cmap_dict = self.return_display_rgb(
+            data=data, split_hemi=True, return_cmap_dict=True, **kwargs
+        )
+        self.get_mesh_info(mesh_name)
+        mpts = {
+            'lh': self.mesh_info[mesh_name]['lh']['coords'],
+            'rh': self.mesh_info[mesh_name]['rh']['coords'],
+        }
+        mpolys = {
+            'lh': self.mesh_info[mesh_name]['lh']['faces'],
+            'rh': self.mesh_info[mesh_name]['rh']['faces'],
+        }
+
+
+        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+        for hemi in hemi_list:
+            if rot_angles is not None:
+                mpts[hemi] = dag_coord_rot(mpts[hemi], rot_angles)
+            if np.isnan(mpts[hemi][0][0]):
+                continue
+
+            pts = mpts[hemi]
+            faces = mpolys[hemi].astype(int)
+
+            # Build (n_faces, 3, 3) array of 3D triangle vertices
+            polys = pts[faces]  # shape (n_faces, 3, 3)
+
+            # Build facecolors from vertex RGB if available
+            facecolors = None
+            if disp_rgb is not None and hemi in disp_rgb and disp_rgb[hemi] is not None:
+                vcols = np.asarray(disp_rgb[hemi], dtype=float)  # (n_vertices,3) or (n_vertices,4)
+                if vcols.max() > 1.001:
+                    vcols = vcols / 255.0  # normalize
+                if vcols.shape[1] == 3:
+                    # add alpha channel
+                    alpha = np.ones((vcols.shape[0], 1))
+                    vcols = np.hstack([vcols, alpha])
+                facecolors = vcols[faces].mean(axis=1)  # average to (n_faces,4)
+
+            # Fallback uniform grey if no colors
+            if facecolors is None:
+                facecolors = np.repeat([[0.8, 0.8, 0.8, 1.0]], polys.shape[0], axis=0)
+
+            # Create and add the Poly3DCollection
+            coll = Poly3DCollection(polys, facecolors=facecolors, edgecolor='none')
+            ax.add_collection3d(coll)
+        return None
+        for roi in roi_list:
+            roi_obj = self._return_roi_borders_in_order(roi)
+            for roi_dict in roi_obj:
+                hemi = roi_dict['hemi']
+                if hemi not in hemi_list:
+                    continue
+                x = mpts[hemi][roi_dict['border_vx'],0]
+                y = mpts[hemi][roi_dict['border_vx'],1]
+                default_settings = {
+                        'marker': '.',
+                        'color': 'k',
+                        'linestyle': 'None',  
+                        'markersize': 0.8,
+                    }
+                default_settings.update(kwargs.get('roi_line', {}))
+                ax.plot(
+                    x,y, 
+                    # roi_dict['border_coords'][:,0],
+                    # roi_dict['border_coords'][:,1],
+                    # '.',
+                    # color='k',
+                    # linewidth=2, markersize=.8,
+                    **default_settings,
+                    label=roi_dict['roi'] if roi_dict['first_instance'] else None,
+                )
+        # Add color bar
+        if colorbar:
+            norm = mpl.colors.Normalize(vmin=cmap_dict['vmin'], vmax=cmap_dict['vmax'])
+            cmap = dag_get_cmap(cmap_dict['cmap'])
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            sm.set_array([])
+            fig.colorbar(sm, ax=ax, orientation='horizontal', label=surf_name)
+        ax.axis('off')
+        ax.set_aspect('equal')
+        return cmap_dict
+    
+
     def reload_flat(self, flat_name):
         '''Reload the flatmap
         '''
