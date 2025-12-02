@@ -328,8 +328,8 @@ class GenMeshMaker(FSMaker):
             curv_val = np.concatenate(curv_val_L)
         return curv_val
     
-    def get_us_values(self, key):
-        if key not in self.us_values.keys():
+    def get_us_values(self, key, ow=False):
+        if (key not in self.us_values.keys()) | ow:
             self.us_values[key] = self._return_fs_curv_vals_both_hemis(
                 curv_name=key, return_type='concat')
         return self.us_values[key]
@@ -541,11 +541,19 @@ class GenMeshMaker(FSMaker):
             #     # Flip x and y,
             #     # pts[:,0] = -pts[:,0]
             #     pts[:,1] = -pts[:,1]                 
-            if hemi == 'lh':
-                max_x_lh = flat[:,0].max()
-            else:
-                flat[:,0] += max_x_lh - flat[:,0].min() + .1 * (max_x_lh - flat[:,0].min())
-
+            # if hemi == 'lh':
+            #     max_x_lh = flat[:,0].max()
+            # else:
+            #     flat[:,0] += max_x_lh - flat[:,0].min() + .01 * (max_x_lh - flat[:,0].min())
+            try:
+                if hemi == 'lh':
+                    # Set max x LH to 0 
+                    flat[connected_pts,0] -= flat[connected_pts,0].max()
+                elif hemi == 'rh':
+                    # set min x RH to 0
+                    flat[connected_pts,0] -= flat[connected_pts,0].min()    
+            except:
+                pass
             hemi_pts[hemi] = flat.copy()
             hemi_polys[hemi] = polys.copy()
             pts_combined.append(flat)
@@ -592,8 +600,8 @@ class GenMeshMaker(FSMaker):
             'lh': self.mesh_info[flat_name]['lh']['faces'],
             'rh': self.mesh_info[flat_name]['rh']['faces'],
         }
-
-
+        xlim = [np.inf, -np.inf]
+        ylim = [np.inf, -np.inf]
         for hemi in hemi_list: 
             if rot_angles is not None:
                 mpts[hemi] = dag_coord_rot(mpts[hemi], rot_angles)         
@@ -604,6 +612,11 @@ class GenMeshMaker(FSMaker):
                 mpts[hemi][:,1],
                 triangles=mpolys[hemi],
             )
+
+            xlim[0] = np.minimum(mpts[hemi][:,0].min(), xlim[0])
+            xlim[1] = np.maximum(mpts[hemi][:,0].max(), xlim[1])
+            ylim[0] = np.minimum(mpts[hemi][:,1].min(), ylim[0])
+            ylim[1] = np.maximum(mpts[hemi][:,1].max(), ylim[1])            
             # Plot the triangulated data using tripcolor
             cmap = mpl.colors.ListedColormap(disp_rgb[hemi])
             c = np.arange(len(disp_rgb[hemi]))
@@ -641,12 +654,19 @@ class GenMeshMaker(FSMaker):
         # Add color bar
         if colorbar:
             norm = mpl.colors.Normalize(vmin=cmap_dict['vmin'], vmax=cmap_dict['vmax'])
-            cmap = dag_get_cmap(cmap_dict['cmap'])
+            try:
+                cmap = dag_get_cmap(cmap_dict['cmap'])
+            except:
+                cmap = dag_cmap_from_str(cmap_dict['cmap'])
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
             sm.set_array([])
             fig.colorbar(sm, ax=ax, orientation='horizontal', label=surf_name)
+        
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        # ax.set_aspect('equal')
+        # ax.set_aspect('equal')
         ax.axis('off')
-        ax.set_aspect('equal')
         return cmap_dict
     
     def t3d_mpl(self, **kwargs):

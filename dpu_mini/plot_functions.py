@@ -50,7 +50,7 @@ def dag_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
             )
     elif plot_type=='pol':
         # POLAR ANGLE
-        pol = np.linspace(-np.pi, np.pi, 100)
+        pol = np.linspace(-np.pi, np.pi, 360)
         ecc = np.linspace(0, 1, 100)
         pol, ecc = np.meshgrid(pol, ecc)
         cax = ax.pcolormesh(
@@ -59,7 +59,7 @@ def dag_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
             )
         ax.set_title(title)
         ax.set_yticks([])
-        dag_update_ax_fontsize(ax, 20)
+        # dag_update_ax_fontsize(ax, 20)
     elif plot_type=='ecc':
         pol = np.linspace(-np.pi, np.pi, 100)
         ecc_vmax = 5 if vmax is None else vmax
@@ -71,10 +71,10 @@ def dag_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
             )
         ax.set_title(title)
         ax.set_xticks([])
-        dag_update_ax_fontsize(ax, 20)        
+        # dag_update_ax_fontsize(ax, 20)        
 
     ax.set_title(title)
-    dag_update_ax_fontsize(ax, 20)
+    # dag_update_ax_fontsize(ax, 20)
     if return_ax:
         return ax
     if return_fig:
@@ -1823,8 +1823,8 @@ def dag_draw_significance_bar(ax, text, i_sub1, i_sub2, y_value=None, **kwargs):
 
 
 def dag_group_and_individual_3dict(ax, mdict, **kwargs):
-    y_upper = kwargs.pop('y_upper', None)
-    y_lower = kwargs.pop('y_lower', None)
+    y_upper = kwargs.pop('y_upper', {k:None for k in mdict.keys()})
+    y_lower = kwargs.pop('y_lower', {k:None for k in mdict.keys()})
     l2_kwargs = kwargs.pop('l2_kwargs', {})
 
     # Ok lets loop around and call 2 dict...

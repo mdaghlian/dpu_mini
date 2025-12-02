@@ -266,6 +266,30 @@ def dag_mesh_interpolate(coords1, coords2, interp):
     coords_interp = ((1-interp) * coords1) + (interp * coords2)
     return coords_interp
 
+def dag_mesh_mask(mesh_info, **kwargs):
+    '''Hide all vx in bool maks'''
+    tmi = mesh_info.copy()
+    mesh_mask = kwargs.get('mesh_mask', np.ones(tmi['coords'].shape[0], dtype=bool))
+    tidx = np.where(mesh_mask)
+    # tmi['coords'][mesh_mask,:] = 0.0
+    f2keep = []
+    for iF in range(tmi['faces'].shape[0]):
+        if tmi['i'][iF] in tidx:
+            pass
+        elif tmi['j'][iF] in tidx:
+            pass
+        elif tmi['k'][iF] in tidx:
+            pass
+        else:
+            f2keep.append(iF)
+    tmi['faces'] = tmi['faces'][f2keep,:]
+    tmi['i'] = tmi['i'][f2keep]
+    tmi['j'] = tmi['j'][f2keep]
+    tmi['k'] = tmi['k'][f2keep]
+
+    return tmi
+
+
 def dag_mesh_slice(mesh_info, **kwargs):
     '''Slice the mesh along a plane'''
     vx_to_remove = np.zeros_like(mesh_info['x'], dtype=bool)
@@ -485,25 +509,12 @@ def dag_lbo_flatten(mesh_info):
     return u2, u3
 
 def dag_igl_flatten(mesh_info, **kwargs):
-    '''Flatten a sphere to 2D
-    This is a probably a bad way to flatten the cortex
-    You should probably do proper surface cuts etc...
-    But this is a quick and dirty way to do it. And may even be ok when you do if for ROIs...
-    It is a work in progress, which may improve overtime...
-    
-    TODO: 
-    * option to define the centre... 
-    * better way to do the projection?
-    https://en.wikipedia.org/wiki/Map_projection
-    
-    
-    # Adjust longitudes based on the new center longitude
-    lon -= center_lon
-    
-    # Ensure lon is within the range [-pi, pi]
-    lon = (lon + np.pi) % (2 * np.pi) - np.pi    
+    '''Flatten using IGL
     '''
     centre_bool = kwargs.pop('centre_bool', 'bleep') # np.ones_like(mesh_info['x'], dtype=bool))
+    initial_guess = kwargs.pop('initial_guess', None)
+    align_to_latlon = kwargs.pop('align_to_latlon', True)
+    align_mask = kwargs.pop('align_mask', None)    
     roi_bool = centre_bool.copy()
     successful_flatten = False
     # morph = kwargs.pop('morph', 0)
@@ -517,27 +528,49 @@ def dag_igl_flatten(mesh_info, **kwargs):
             total_morph += 1
             n_steps += 1
             continue
-
-        obj_str = dag_obj_write(submesh_info)
-        # Write to file
-        obj_file = '/tmp/tmp.obj'
-        dag_str2file(filename=obj_file, txt=obj_str)
-        # https://github.com/libigl/libigl-python-bindings/blob/main/tutorial/tutorials.ipynb
         import igl
-        v, f = igl.read_triangle_mesh(obj_file)
-        os.remove(obj_file)    
-        
-        # Find the open boundary
-        bnd = igl.boundary_loop(f)
+        v = submesh_info['coords']
+        f = submesh_info['faces']        
+        if False: # Still testing different options....
+            # Find the open boundary
+            bnd = igl.boundary_loop(f)        
+            b = np.array([bnd[0], bnd[len(bnd)//2]])
+            bc = np.array([[0.0, 0.0], [1.0, 0.0]])
+            bnd_uv = igl.map_vertices_to_circle(v, bnd)
+            uv = igl.harmonic(v, f, bnd, bnd_uv, 1)
+            # ARAP parametrization - the modern way
+            arap = igl.ARAP(v, f, 2, b) #np.array([], dtype=np.int32))
+            uva = arap.solve(bc, uv)                
+        elif True:
+            # Find the open boundary
+            bnd = igl.boundary_loop(f)        
+            bnd_uv = igl.map_vertices_to_circle(v, bnd)
+            uv = igl.harmonic(v, f, bnd, bnd_uv, 1)
+            # ARAP parametrization - the modern way
+            arap = igl.ARAP(v, f, 2, np.array([], dtype=np.int32))
+            uva = arap.solve(np.zeros((0,2)), uv)                
 
-        # Map the boundary to a circle, preserving edge proportions
-        bnd_uv = igl.map_vertices_to_circle(v, bnd)
-        # Harmonic parametrization for the internal vertices
-        uv = igl.harmonic(v, f, bnd, bnd_uv, 1)
-        arap = igl.ARAP(v, f, 2, np.zeros(0))
-        uva = arap.solve(np.zeros((0, 0)), uv)
+        # v_flat = v.copy()
+        # print(v_flat)
+        # print(initial_guess.shape)
+        # v_flat[:,0] = initial_guess[roi_bool,0]
+        # v_flat[:,1] = initial_guess[roi_bool,1]
+
+        # # mapping boundary -> circle then harmonic -> ARAP (unchanged)
+        # bnd = igl.boundary_loop(f)
+        # b = np.array([bnd[0], bnd[len(bnd)//2]])
+        # bc = np.array([[0.0, 0.0], [1.0, 0.0]])
+
+        # bnd_uv = igl.map_vertices_to_circle(v_flat, bnd)
+        # uv = igl.harmonic(v_flat, f, bnd, bnd_uv, 1)
+
+        # arap = igl.ARAP(v, f, 2, np.array([], dtype=np.int32))
+        # uva = arap.solve(np.zeros((0, 2)), uv)
+
+
+
         # Check for any nans
-        nans_present = (np.isnan(uva)).sum()
+        nans_present = (np.isnan(uv)).sum()
         print(f'Nans present: {nans_present.mean()}')
         nans_present = nans_present>0
         # Combine both outputs to check for "error"
@@ -551,8 +584,11 @@ def dag_igl_flatten(mesh_info, **kwargs):
             # Lets do a quick check, we want roughly the same orientation
             # If not, then we need to flip the orientation
             # [1] x 
-            # corr_x = dag_get_corr(v[:,0], uva[:,0])
-            # corr_y = dag_get_corr(v[:,1], uva[:,1])
+            coords = submesh_info['coords']
+            p1, p2 = dag_sph2flat(coords, **kwargs)
+            corr_x = dag_get_corr(p1, uva[:,0])
+            corr_y = dag_get_corr(p2, uva[:,1])
+            # uva[:,0] = -1
             # if corr_x<0:
             #     uva[:,0] *= -1
             # if corr_y<0:
@@ -560,6 +596,15 @@ def dag_igl_flatten(mesh_info, **kwargs):
             # print(f'Corr x: {corr_x:.2f} y: {corr_y:.2f}')
             # bloop
             print(f'Successful flatten with morph={total_morph}')
+            # --- NEW: align IGL result to latlon (optional) ---
+            if align_to_latlon:
+                try:
+                    uva = dag_align_igl_to_latlon(
+                        submesh_info=submesh_info, uva=uva, mesh_info=mesh_info, **kwargs)
+                    print('Aligned IGL flatten to lat/lon projection (similarity transform).')
+                except Exception as e:
+                    print('Warning: alignment to latlon failed, proceeding without alignment:', e)
+
             print('Here it looks like this...')
             fig, axs = plt.subplots(1,2)
             axs[0].scatter(uva[:,0], uva[:,1], c=v[:,0])
@@ -575,8 +620,16 @@ def dag_igl_flatten(mesh_info, **kwargs):
     p2 = np.zeros_like(mesh_info['y'])
     # check for nans
     assert not np.isnan(uva).any(), 'Nans present in uva'
-    p1[submesh_info['vx_idx']] = uva[:,0]
-    p2[submesh_info['vx_idx']] = uva[:,1]
+    
+    # Handle the case where cut_mesh may have created additional vertices
+    if len(uva) == len(submesh_info['vx_idx']):
+        p1[submesh_info['vx_idx']] = uva[:,0]
+        p2[submesh_info['vx_idx']] = uva[:,1]
+    else:
+        # If vertices were duplicated by cuts, only map the original vertices
+        p1[submesh_info['vx_idx']] = uva[:len(submesh_info['vx_idx']),0]
+        p2[submesh_info['vx_idx']] = uva[:len(submesh_info['vx_idx']),1]
+    
     # face_to_cut = np.ones_like(mesh_info['i'], dtype=bool)
     # face_to_cut[submesh_info['face_idx']] = False
     vx_to_include = np.zeros_like(mesh_info['x'], dtype=bool)
@@ -584,6 +637,114 @@ def dag_igl_flatten(mesh_info, **kwargs):
     f_to_include = np.zeros_like(mesh_info['i'], dtype=bool)
     f_to_include[submesh_info['face_idx']] = True
     return p1, p2 , vx_to_include, f_to_include
+
+from scipy.spatial.transform import Rotation as SciRot
+
+def align_points(a, b, align_mask=None):
+    """
+    Align point set b to point set a using Procrustes analysis.
+
+    Parameters:
+    - a: array of shape (n, 2) - target coordinates
+    - b: array of shape (n, 2) - coordinates to transform
+    - align_mask: array of shape (n,) or None - boolean mask. 
+                  If provided, alignment is based only on masked points 
+                  (a[mask], b[mask]), but the transformation is applied to all of b.
+                  Note: a and b must have the same number of points (n).
+
+    Returns:
+    - b_transformed: transformed coordinates of b (shape (n, 2))
+    - angle: rotation angle in radians
+    - translation: (tx, ty) translation vector
+    """
+    a = np.array(a)
+    b = np.array(b)
+
+    # 1. Select the points for alignment based on the mask
+    if align_mask is not None:
+        a_align = a[align_mask]
+        b_align = b[align_mask]
+    else:
+        a_align = a
+        b_align = b
+
+    # Ensure a and b have the same number of points if a mask is not used
+    # If a mask is used, we assume len(a) == len(b) == len(mask)
+    if len(a) != len(b):
+        raise ValueError("a and b must have the same number of points (rows).")
+    
+    if len(a_align) < 2:
+        # Cannot align with fewer than 2 points
+        # In this case, we'll center based on all points but apply no rotation
+        if align_mask is not None:
+            print("Warning: Align mask resulted in fewer than 2 points. Only translation will be computed based on the full sets.")
+        
+        # Fallback to full set for a meaningful transformation, or return original b
+        a_center = np.mean(a, axis=0)
+        b_center = np.mean(b, axis=0)
+        
+        angle = 0.0 # No rotation
+        translation = a_center - b_center
+        b_transformed = b + translation
+        return b_transformed, angle, translation
+        
+    # 2. Compute transformation parameters (Rotation and Translation) using the alignment subsets
+
+    # Center alignment subsets
+    a_center_align = np.mean(a_align, axis=0)
+    b_center_align = np.mean(b_align, axis=0)
+    a_centered_align = a_align - a_center_align
+    b_centered_align = b_align - b_center_align
+
+    # Compute optimal rotation using SVD (Kabsch Algorithm)
+    H = b_centered_align.T @ a_centered_align
+    U, S, Vt = np.linalg.svd(H)
+    R = Vt.T @ U.T
+
+    # Ensure proper rotation (det(R) = 1), not reflection
+    if np.linalg.det(R) < 0:
+        # Correction for reflection: flip the sign of the last column of U or last row of Vt
+        Vt[-1, :] *= -1
+        R = Vt.T @ U.T
+
+    # Extract angle from the optimal rotation matrix
+    angle = np.arctan2(R[1, 0], R[0, 0])
+
+    # 3. Apply the transformation to the *full* point set 'b'
+
+    # Center all points in b using the center of the alignment subset b_align
+    b_centered_full = b - b_center_align
+    
+    # Apply rotation to the full set
+    b_rotated_full = b_centered_full @ R.T
+
+    # The new center of the *aligned subset* after rotation:
+    # This is equivalent to (b_align - b_center_align) @ R.T
+    b_rotated_align_center = np.mean(b_rotated_full[align_mask] if align_mask is not None else b_rotated_full, axis=0)
+
+    # Final translation: move the rotated subset's center to the target subset's center
+    translation = a_center_align - b_rotated_align_center
+    
+    # Apply the final translation to the full set
+    b_transformed = b_rotated_full + translation
+
+    return b_transformed
+
+def dag_align_igl_to_latlon(submesh_info, uva, mesh_info, align_mask=None, **kwargs):
+    """
+    Rotate to align with the sphere method 
+    """
+    # Compute lat/lon flatten for the submesh vertices (target)
+    coords = submesh_info['coords']
+    p1, p2 = dag_sph2flat(coords, **kwargs)
+    a = np.vstack([p1, p2]).T  # (m,2)
+    b = uva[:,:2]
+    b_updated = align_points(a,b, align_mask=align_mask)
+
+    uva_out = uva.copy()
+    uva_out[:, 0] = b_updated[:, 0]
+    uva_out[:, 1] = b_updated[:, 1]
+    return uva_out
 
 import copy
 def dag_flatten(mesh_info, **kwargs):
@@ -599,12 +760,14 @@ def dag_flatten(mesh_info, **kwargs):
     if method=='latlon':
         p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
     elif method=='igl':
-        try:
-            p1, p2, vx_to_include_IGL, face_to_include_IGL = dag_igl_flatten(mesh_info, **kwargs)
-            vx_to_include = vx_to_include_IGL
-            f_to_include = face_to_include_IGL
-        except:
-            p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
+        # try:
+        p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
+        initial_guess = np.vstack([p1,p2]).T        
+        p1, p2, vx_to_include_IGL, face_to_include_IGL = dag_igl_flatten(mesh_info,initial_guess=initial_guess, **kwargs)
+        vx_to_include = vx_to_include_IGL
+        f_to_include = face_to_include_IGL
+        # except:
+        # p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
     elif method=='lbo':
         p1, p2 = dag_lbo_flatten(mesh_info)
 
