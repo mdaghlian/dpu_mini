@@ -4,3 +4,4 @@ z_*
 *cache*
 *.bu
 *_cpp
+.DS_Store

@@ -628,7 +628,7 @@ class MeshDash(GenMeshMaker):
             dcc.Graph(id='mesh-plot', figure=self.dash_fig),
             html.Div(
                 id='colbar-div',
-                style={'maxWidth': '400px', 'width': '100%', 'overflowX': 'auto', 'overflowY': 'auto'},
+                # style={'maxWidth': '400px', 'width': '30%', 'overflowX': 'auto', 'overflowY': 'auto'},
             ),  # Plot the colorbar
             # Update on / off
             dcc.Checklist(id='vxtoggle',

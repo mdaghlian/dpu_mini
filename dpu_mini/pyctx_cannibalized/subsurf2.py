@@ -22,10 +22,12 @@ opj = os.path.join
 from PIL import Image
 import uuid
 
-from dag_prf_utils.mesh_maker import *
-from dag_prf_utils.mesh_format import *
-from dag_prf_utils.cmap_functions import *
-from dag_prf_utils.utils import *
+
+from dpu_mini.mesh_maker import *
+from dpu_mini.mesh_format import *
+from dpu_mini.cmap_functions import *
+from dpu_mini.utils import *
+
 '''
 MUCH STOLEN FROM JHEIJ LINESCANNING!!!
 '''
@@ -736,13 +738,15 @@ class PyctxMaker(GenMeshMaker):
         self.ctx_path = kwargs.get('ctx_path', None)
         ow_ctx_files = kwargs.get('ow_ctx_files', False)
         self.flat_name = kwargs.get('flat_name', 'default') # Are we going to load special flat stuff?
+        self.ctx_path = cortex.database.default_filestore
+        self.sub_ctx_path = opj(self.ctx_path, self.subject)
         # self.special_flat_dir = 
-        if self.ctx_path is not None:
-            set_ctx_path(self.ctx_path)            
-            self.sub_ctx_path = opj(self.ctx_path, self.subject)
-        else:
-            self.ctx_path = get_ctx_path()
-            self.sub_ctx_path = opj(self.ctx_path, self.subject)
+        # if self.ctx_path is not None:
+        #     set_ctx_path(self.ctx_path)            
+        #     self.sub_ctx_path = opj(self.ctx_path, self.subject)
+        # else:
+        #     self.ctx_path = get_ctx_path()
+        #     self.sub_ctx_path = opj(self.ctx_path, self.subject)
         print(self.ctx_path)
         
         # Try adding flat
@@ -756,17 +760,17 @@ class PyctxMaker(GenMeshMaker):
         # grr...
         self.fixed_unique = kwargs.get('fixed_unique', False) # Have we fixed the unique issue in pycortex? 
         self.dud = kwargs.get('dud', False)
-        print(self.sub_ctx_path)
-        if not os.path.exists(self.sub_ctx_path) or ow_ctx_files:
-            # import subject from freesurfer (will have the same names)
-            cortex.freesurfer.import_subj(
-                freesurfer_subject=self.sub,
-                pycortex_subject=self.sub,
-                freesurfer_subject_dir=self.fs_dir,
-                # whitematter_surf='smoothwm'
-                )        
-        # reload database after import
-        cortex.db.reload_subjects()
+        # print(self.sub_ctx_path)
+        # if not os.path.exists(self.sub_ctx_path) or ow_ctx_files:
+        #     # import subject from freesurfer (will have the same names)
+        #     cortex.freesurfer.import_subj(
+        #         freesurfer_subject=self.sub,
+        #         pycortex_subject=self.sub,
+        #         freesurfer_subject_dir=self.fs_dir,
+        #         # whitematter_surf='smoothwm'
+        #         )        
+        # # reload database after import
+        # cortex.db.reload_subjects()
         #this provides a nice workaround for pycortex opacity issues, at the cost of interactivity    
         # Get curvature
         try:
@@ -1664,7 +1668,7 @@ class Subsurface(object):
         # Get rid of these as they are harmful for pickling. We no longer need them.
         # self.surfaces, self.subsurface_L, self.subsurface_R = None, None, None
 
-    def pad_distance_matrices(self, padval=np.Inf):
+    def pad_distance_matrices(self, padval=np.inf):
         """pad_distance_matrices
         Pads the distance matrices so that distances to the opposite hemisphere are np.inf
         Stack them on top of each other so they will have the same size as the design matrix
@@ -1675,10 +1679,10 @@ class Subsurface(object):
 
         # Pad the right hem with np.inf.
         padL = np.pad(
-            self.dists_L, ((0, 0), (0, self.dists_R.shape[-1])), constant_values=np.Inf)
+            self.dists_L, ((0, 0), (0, self.dists_R.shape[-1])), constant_values=np.inf)
         # pad the left hem with np.inf..
         padR = np.pad(
-            self.dists_R, ((0, 0), (self.dists_L.shape[-1], 0)), constant_values=np.Inf)
+            self.dists_R, ((0, 0), (self.dists_L.shape[-1], 0)), constant_values=np.inf)
 
         self.distance_matrix = np.vstack([padL, padR])  # Now stack.
 
