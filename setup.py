@@ -46,7 +46,7 @@ class BuildCPPProject(_build_py):
 
 setup(
     # Since metadata is now in setup.cfg, we only need to reference it.
-    cmdclass={"build_py": BuildCPPProject},
+    # cmdclass={"build_py": BuildCPPProject},
 )
 base_dir = os.path.dirname(os.path.abspath(__file__))
 cli_setup_file = os.path.join(base_dir, "cli_setup.sh")
