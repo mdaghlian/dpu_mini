@@ -1,0 +1,141 @@
+#!/usr/bin/env python
+"""
+pngs_to_gif.py - Convert all PNGs in a folder to an animated GIF.
+
+Usage:
+    python pngs_to_gif.py <folder> [options]
+
+Options:
+    --fps FPS         Frames per second (default: 4)
+    --output PATH     Output GIF path (default: <folder>/output.gif)
+    --sort {name,mtime}
+                      Sort order for frames (default: name)
+    --no-loop         Play once instead of looping
+"""
+
+import argparse
+import sys
+from pathlib import Path
+from PIL import Image
+
+
+def pngs_to_gif(
+    folder: Path,
+    output: Path,
+    fps: float = 4,
+    sort_by: str = "name",
+    loop: bool = True,
+) -> None:
+
+
+    # Collect PNGs
+    pngs = list(folder.glob("*.png")) + list(folder.glob("*.PNG"))
+    if not pngs:
+        sys.exit(f"No PNG files found in: {folder}")
+
+    # Sort frames
+    if sort_by == "mtime":
+        pngs.sort(key=lambda p: p.stat().st_mtime)
+    else:
+        pngs.sort(key=lambda p: p.name.lower())
+
+    print(f"Found {len(pngs)} PNG(s) in '{folder}', sorted by {sort_by}.")
+    for p in pngs:
+        print(f"  {p.name}")
+
+    # Load frames
+    frames = []
+    reference_size = None
+    for path in pngs:
+        img = Image.open(path).convert("RGBA")
+        if reference_size is None:
+            reference_size = img.size
+        elif img.size != reference_size:
+            print(
+                f"  ⚠  Resizing {path.name} from {img.size} to {reference_size}"
+            )
+            img = img.resize(reference_size, Image.LANCZOS)
+        frames.append(img)
+
+    # GIF doesn't support full RGBA — composite onto white background
+    def to_palette(frame: "Image.Image") -> "Image.Image":
+        bg = Image.new("RGBA", frame.size, (255, 255, 255, 255))
+        bg.paste(frame, mask=frame.split()[3])
+        return bg.convert("P", palette=Image.ADAPTIVE, colors=256)
+
+    palette_frames = [to_palette(f) for f in frames]
+
+    duration_ms = int(1000 / fps)
+    loop_value = 0 if loop else 1  # 0 = infinite loop in Pillow
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    palette_frames[0].save(
+        output,
+        format="GIF",
+        save_all=True,
+        append_images=palette_frames[1:],
+        duration=duration_ms,
+        loop=loop_value,
+        optimize=False,
+    )
+
+    size_kb = output.stat().st_size / 1024
+    print(
+        f"\n✓ Saved GIF → {output}\n"
+        f"  Frames : {len(frames)}\n"
+        f"  FPS    : {fps}  ({duration_ms} ms/frame)\n"
+        f"  Size   : {size_kb:.1f} KB\n"
+        f"  Loop   : {'yes' if loop else 'no'}"
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Convert all PNGs in a folder to an animated GIF."
+    )
+    parser.add_argument("folder", type=Path, help="Folder containing PNG files")
+    parser.add_argument(
+        "--fps",
+        type=float,
+        default=4,
+        metavar="FPS",
+        help="Frames per second (default: 4)",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Output GIF path (default: <folder>/output.gif)",
+    )
+    parser.add_argument(
+        "--sort",
+        choices=["name", "mtime"],
+        default="name",
+        dest="sort_by",
+        help="Sort order: 'name' (alphabetical) or 'mtime' (modification time). Default: name",
+    )
+    parser.add_argument(
+        "--no-loop",
+        action="store_true",
+        help="Play the GIF once instead of looping",
+    )
+    args = parser.parse_args()
+
+    folder = args.folder.resolve()
+    if not folder.is_dir():
+        sys.exit(f"Not a directory: {folder}")
+
+    output = args.output or folder / "output.gif"
+
+    pngs_to_gif(
+        folder=folder,
+        output=output,
+        fps=args.fps,
+        sort_by=args.sort_by,
+        loop=not args.no_loop,
+    )
+
+
+if __name__ == "__main__":
+    main()

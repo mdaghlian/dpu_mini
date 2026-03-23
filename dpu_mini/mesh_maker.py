@@ -456,6 +456,25 @@ class GenMeshMaker(FSMaker):
             self.mesh_info[flat_name][hemi]['i'] = flat_polys[:,0]
             self.mesh_info[flat_name][hemi]['j'] = flat_polys[:,1]
             self.mesh_info[flat_name][hemi]['k'] = flat_polys[:,2]    
+    def rescale_mesh_info(self, mesh_name):
+        for hemi in ['lh', 'rh']:
+            flat = self.mesh_info[mesh_name][hemi]
+            pts = flat['coords']
+            polys = flat['faces']
+
+            connected_pts = np.zeros(len(pts), dtype=bool)
+            connected_pts[np.unique(polys)] = True
+            pts[connected_pts] -= pts[connected_pts].mean(axis=0)
+            try:
+                if hemi == 'lh':
+                    # Set max x LH to 0 
+                    pts[connected_pts,0] -= pts[connected_pts,0].max()
+                elif hemi == 'rh':
+                    # set min x RH to 0
+                    pts[connected_pts,0] -= pts[connected_pts,0].min()    
+            except:
+                pass
+            self.mesh_info[mesh_name][hemi]['coords'] = pts
 
     def make_flat_map(self, centre_bool=None, **kwargs):
         '''
@@ -469,7 +488,7 @@ class GenMeshMaker(FSMaker):
 
         TODO: remove cut from Y 
         '''
-
+        from sklearn.decomposition import PCA
         if not os.path.exists(self.custom_surf_dir):
             os.makedirs(self.custom_surf_dir)
         method = kwargs.pop('method', 'latlon')
@@ -528,32 +547,24 @@ class GenMeshMaker(FSMaker):
                 method=method,
                 **hemi_kwargs)        
             flat = pts
-            # do some cleaning...
 
             # Demean everything
-            # Disconnected points 
             connected_pts = np.zeros(len(pts), dtype=bool)
             connected_pts[np.unique(polys)] = True
             flat[connected_pts] -= flat[connected_pts].mean(axis=0)
-            scale_x = (infl_x.max() - infl_x.min()) / (flat[:,0].max() - flat[:,0].min())
-            flat *= scale_x*3 # Meh seems nice enough
-            # if hemi == 'rh':
-            #     # Flip x and y,
-            #     # pts[:,0] = -pts[:,0]
-            #     pts[:,1] = -pts[:,1]                 
-            # if hemi == 'lh':
-            #     max_x_lh = flat[:,0].max()
-            # else:
-            #     flat[:,0] += max_x_lh - flat[:,0].min() + .01 * (max_x_lh - flat[:,0].min())
-            try:
-                if hemi == 'lh':
-                    # Set max x LH to 0 
-                    flat[connected_pts,0] -= flat[connected_pts,0].max()
-                elif hemi == 'rh':
-                    # set min x RH to 0
-                    flat[connected_pts,0] -= flat[connected_pts,0].min()    
-            except:
-                pass
+
+            # ── PCA rotation: align principal axis of spread with x-axis ──────────
+            xy = flat[connected_pts, :2]
+            cov = np.cov(xy.T)
+            eigenvalues, eigenvectors = np.linalg.eigh(cov)
+            # eigh returns ascending order, so flip to get PC1 first
+            eigenvectors = eigenvectors[:, ::-1]
+            new_xy = xy @ eigenvectors
+            flat[connected_pts, 0] = new_xy[:,1]*-1
+            flat[connected_pts, 1] = new_xy[:,0]
+            scale_x = (infl_x.max() - infl_x.min()) / (flat[:, 0].max() - flat[:, 0].min())
+            flat *= scale_x * 3
+            # do some cleaning...
             hemi_pts[hemi] = flat.copy()
             hemi_polys[hemi] = polys.copy()
             pts_combined.append(flat)
@@ -591,7 +602,7 @@ class GenMeshMaker(FSMaker):
         disp_rgb, cmap_dict = self.return_display_rgb(
             data=data, split_hemi=True, return_cmap_dict=True, **kwargs
         )
-        self.get_mesh_info(flat_name)
+        # self.get_mesh_info(flat_name)
         mpts = {
             'lh': self.mesh_info[flat_name]['lh']['coords'],
             'rh': self.mesh_info[flat_name]['rh']['coords'],
@@ -626,6 +637,9 @@ class GenMeshMaker(FSMaker):
                 cmap=cmap,
                 shading='gouraud',  # Smooth interpolation between vertices
             )
+            print(xlim)
+            print(ylim)
+
         for roi in roi_list:
             roi_obj = self._return_roi_borders_in_order(roi)
             for roi_dict in roi_obj:

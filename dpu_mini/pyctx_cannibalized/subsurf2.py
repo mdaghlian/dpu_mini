@@ -751,7 +751,7 @@ class PyctxMaker(GenMeshMaker):
         
         # Try adding flat
         try:
-            self.add_flat_to_mesh_info()
+            self.add_flat_to_mesh_info_ctx()
         except:
             pass
         self.vertex_dict = {} 
@@ -1119,7 +1119,7 @@ class PyctxMaker(GenMeshMaker):
         if write_to_default:
             self.clear_cache()
 
-        self.add_flat_to_mesh_info(**kwargs)
+        self.add_flat_to_mesh_info_ctx(**kwargs)
         print('All done! Remember to restart the kernel before trying to make the new overlay')
 
     
@@ -1367,7 +1367,7 @@ class PyctxMaker(GenMeshMaker):
         # svgroipack = get_overlay(self.subject, filename, mpts, mpolys)
         # svg = etree.parse(svgroipack.svgfile, parser=parser)
 
-    def add_flat_to_mesh_info(self, **kwargs):
+    def add_flat_to_mesh_info_ctx(self, **kwargs):
         '''
         Add the flatmap to the mesh_info
         '''

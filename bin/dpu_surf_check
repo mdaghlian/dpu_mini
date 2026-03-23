@@ -65,4 +65,4 @@ $DIR_SURF/rh.white:edgecolor=yellow"
 
 # Execute the command
 echo "Opening subject $SUBJECT_ID in freeview..."
-eval $freeview_cmd
+eval $freeview_cmd &

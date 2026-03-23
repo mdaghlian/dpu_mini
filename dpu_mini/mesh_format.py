@@ -190,42 +190,57 @@ def dag_get_roi_border_edge(mesh_info, roi_bool):
     outer_edge_list = np.hstack(outer_edge_list).T
     return outer_edge_list
 
+def prune_adjacency_list(adjacency_list):
+    '''Iteratively remove degree-1 vertices (dead ends / peninsulas)'''
+    adj = {v: list(nb) for v, nb in adjacency_list.items()}  # copy
+    changed = True
+    while changed:
+        changed = False
+        dead_ends = [v for v, nb in adj.items() if len(nb) == 1]
+        for v in dead_ends:
+            # remove v from its neighbour's list
+            for nb in adj[v]:
+                if v in adj[nb]:
+                    adj[nb].remove(v)
+            del adj[v]
+            changed = True
+    return adj
+
 def dag_order_edges(edges):
     '''Order the edges to form a closed loop'''
-    unique_vx = list(np.unique(edges.flatten()))
-    # print(unique_vx[0])
-    # Step 1: Create an adjacency list
+    
+    # Canonicalise edges so (A,B) and (B,A) are treated as the same edge
+    canonical = set()
+    deduped = []
+    for u, v in edges:
+        key = (min(u,v), max(u,v))
+        if key not in canonical:
+            canonical.add(key)
+            deduped.append((u, v))
+    
+    # Build adjacency list
     adjacency_list = {}
-    for i_edge in range(edges.shape[0]):
-        u, v = edges[i_edge,0],edges[i_edge,1]
-        if u not in adjacency_list:
-            adjacency_list[u] = []
-        if v not in adjacency_list:
-            adjacency_list[v] = []
-        adjacency_list[u].append(v)
-        adjacency_list[v].append(u)
-
-    # Step 2: Choose a starting vertex
-    start_vertex = list(adjacency_list.keys())[0]
-
-    # There may be more than one closed path... (e.g., V2v V2d)
+    for u, v in deduped:
+        adjacency_list.setdefault(u, []).append(v)
+        adjacency_list.setdefault(v, []).append(u)
+    adjacency_list = prune_adjacency_list(adjacency_list)
+    bad = {v: nb for v, nb in adjacency_list.items() if len(nb) != 2}
+    if bad:
+        print(f"Warning: {len(bad)} vertices without exactly 2 neighbours: {bad}")
+    unique_vx = list(adjacency_list.keys())
     set_unordered = set(unique_vx)
     ordered_list_multi = []
-    set_ordered = set(sum(ordered_list_multi, [])) # flatten list and make it a set
-    missing_vx = list(set_unordered - set_ordered)
-    while len(missing_vx)!=0:
+
+    while True:
+        set_ordered = set(sum(ordered_list_multi, []))
+        missing_vx = list(set_unordered - set_ordered)
+        if not missing_vx:
+            break
         start_vertex = missing_vx[0]
         ordered_list = dag_traverse_graph(start_vertex, adjacency_list)
         ordered_list_multi.append(ordered_list)
-        set_ordered = set(sum(ordered_list_multi, [])) # flatten list and make it a set
-        missing_vx = list(set_unordered - set_ordered)
 
-    # OPTION: Convert ordered list to edge list
-    # ordered_edges = [(ordered_list[i], ordered_list[(i + 1) % len(ordered_list)]) for i in range(len(ordered_list))]
-
-
-    return ordered_list_multi#np.array(ordered_list)
-
+    return ordered_list_multi
 
 def dag_traverse_graph(start_vertex, adjacency_list):
     '''Traverse a graph using 
@@ -541,7 +556,7 @@ def dag_igl_flatten(mesh_info, **kwargs):
             # ARAP parametrization - the modern way
             arap = igl.ARAP(v, f, 2, b) #np.array([], dtype=np.int32))
             uva = arap.solve(bc, uv)                
-        elif True:
+        else:
             # Find the open boundary
             bnd = igl.boundary_loop(f)        
             bnd_uv = igl.map_vertices_to_circle(v, bnd)
@@ -768,8 +783,12 @@ def dag_flatten(mesh_info, **kwargs):
         f_to_include = face_to_include_IGL
         # except:
         # p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
+        
     elif method=='lbo':
         p1, p2 = dag_lbo_flatten(mesh_info)
+    elif method == 'none':
+        p1 = mesh_info['coords'][:,0]
+        p2 = mesh_info['coords'][:,1]
 
     # find relative scale...
     flat_info['x'] = p1 #- p1.mean()# Demean

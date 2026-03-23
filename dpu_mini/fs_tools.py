@@ -903,3 +903,35 @@ def dag_read_fs_curv_file(curv_file):
 
 # ***********************************************************************************************
 
+# def read_flat_patch(patch_file, all_faces):
+#     """
+#     Read a FreeSurfer .flat.patch.3d and return coords + faces.
+    
+#     patch_file        : e.g. 'surf/lh.occipital.flat.patch.3d'
+#     orig_surface_file : e.g. 'surf/lh.white'  (needed for face topology)
+#     """
+#     # --- 1. Read patch (vertices + flat coords) ---
+#     with open(patch_file, 'rb') as f:
+#         assert struct.unpack('>i', f.read(4))[0] == -1, "Not a valid patch file"
+#         nverts = struct.unpack('>i', f.read(4))[0]
+#         data = np.frombuffer(f.read(nverts * 16), dtype=[
+#             ('vtx', '>i4'), ('x', '>f4'), ('y', '>f4'), ('z', '>f4')
+#         ])
+
+#     vert_idx = np.abs(data['vtx']) - 1          # global vertex indices
+#     coords   = np.c_[data['x'], data['y'], data['z']]  # flat coordinates
+
+#     # --- 2. Get faces from original surface, filtered to patch verts ---
+
+#     patch_set = set(vert_idx.tolist())
+#     mask = np.array([
+#         v0 in patch_set and v1 in patch_set and v2 in patch_set
+#         for v0, v1, v2 in all_faces
+#     ])
+#     global_faces = all_faces[mask]
+
+#     # --- 3. Remap to local (0-based) indices ---
+#     g2l = {g: l for l, g in enumerate(vert_idx)}
+#     faces = np.array([[g2l[v] for v in f] for f in global_faces])
+
+#     return {'coords': coords, 'faces': faces}
