@@ -3,7 +3,6 @@ numpy
 seaborn
 scipy
 regex
-# gdist
 PyYAML
 pandas
 tqdm
