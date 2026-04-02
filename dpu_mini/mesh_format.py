@@ -6,12 +6,12 @@ import struct
 opj = os.path.join
 
 from dpu_mini.utils import *
-from dpu_mini.fs_tools import dag_serialize_volume_info
+from dpu_mini.fs_tools import dpu_serialize_volume_info
 from dpu_mini.plot_functions import *
 
 from tqdm import tqdm
 
-def dag_smooth_data(distances, time_series, fwhm_mm, sigma_units='mm'):
+def dpu_smooth_data(distances, time_series, fwhm_mm, sigma_units='mm'):
     """
     Smooths time series data associated with vertices on a cortical surface
     using a Gaussian kernel weighted by geodesic distances.
@@ -50,9 +50,9 @@ def dag_smooth_data(distances, time_series, fwhm_mm, sigma_units='mm'):
 
     return smoothed_time_series
 
-def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
+def dpu_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
     gdist_method = kwargs.get('gdist_method', 'pycortex')
-    submesh = dag_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
+    submesh = dpu_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
     if gdist_method=='pycortex':
         from dpu_mini.pyctx_cannibalized.surface import Surface
         sm = Surface(submesh['coords'], submesh['faces'])
@@ -76,7 +76,7 @@ def dag_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
 
 
 
-def dag_find_isolated_vx(mesh_info, roi_bool):
+def dpu_find_isolated_vx(mesh_info, roi_bool):
     ''' Find isolated vertices in (connected to no other faces) '''
     assert 'i' in mesh_info.keys(), 'mesh_info should have i,j,k'
     roi_idx = np.where(roi_bool)[0]
@@ -95,7 +95,7 @@ def dag_find_isolated_vx(mesh_info, roi_bool):
     isolated_vx = np.setdiff1d(vx_in_faces_with_1_vx_only, vx_in_faces_with_more_than_1_vx)
     return isolated_vx
 
-def dag_find_border_vx(mesh_info, roi_bool, return_type='bool'):
+def dpu_find_border_vx(mesh_info, roi_bool, return_type='bool'):
     '''
     Find those vx which are on a border... 
     '''
@@ -130,13 +130,13 @@ def dag_find_border_vx(mesh_info, roi_bool, return_type='bool'):
     return border_vx_out
     
 
-def dag_find_border_vx_in_order(mesh_info, roi_bool, return_coords=False):
-    '''dag_find_border_vx_in_order
+def dpu_find_border_vx_in_order(mesh_info, roi_bool, return_coords=False):
+    '''dpu_find_border_vx_in_order
     Find the border vertices in order to draw a closed loop    
     '''
     assert 'i' in mesh_info.keys(), 'mesh_info should have i,j,k'
-    outer_edge_list = dag_get_roi_border_edge(mesh_info, roi_bool)    
-    border_vx = dag_order_edges(outer_edge_list)
+    outer_edge_list = dpu_get_roi_border_edge(mesh_info, roi_bool)    
+    border_vx = dpu_order_edges(outer_edge_list)
     if not return_coords:
         return border_vx
     # border_vx = sum(border_vx, []) # flatten list
@@ -151,7 +151,7 @@ def dag_find_border_vx_in_order(mesh_info, roi_bool, return_coords=False):
     return border_vx,border_vx_coords
 
 
-def dag_get_roi_border_edge(mesh_info, roi_bool):
+def dpu_get_roi_border_edge(mesh_info, roi_bool):
     '''
     Find those vx which are on a border... 
     '''
@@ -206,7 +206,7 @@ def prune_adjacency_list(adjacency_list):
             changed = True
     return adj
 
-def dag_order_edges(edges):
+def dpu_order_edges(edges):
     '''Order the edges to form a closed loop'''
     
     # Canonicalise edges so (A,B) and (B,A) are treated as the same edge
@@ -237,12 +237,12 @@ def dag_order_edges(edges):
         if not missing_vx:
             break
         start_vertex = missing_vx[0]
-        ordered_list = dag_traverse_graph(start_vertex, adjacency_list)
+        ordered_list = dpu_traverse_graph(start_vertex, adjacency_list)
         ordered_list_multi.append(ordered_list)
 
     return ordered_list_multi
 
-def dag_traverse_graph(start_vertex, adjacency_list):
+def dpu_traverse_graph(start_vertex, adjacency_list):
     '''Traverse a graph using 
     i.e. we have a list of edges, and we want to find the order of the vertices
     Useful for drawing an ROI
@@ -274,14 +274,14 @@ def dag_traverse_graph(start_vertex, adjacency_list):
             
     return ordered_list
 
-def dag_mesh_interpolate(coords1, coords2, interp):
+def dpu_mesh_interpolate(coords1, coords2, interp):
     '''Interpolate coordinate from 1 to 2 in step interp
     So we can inflate the mesh    
     '''
     coords_interp = ((1-interp) * coords1) + (interp * coords2)
     return coords_interp
 
-def dag_mesh_mask(mesh_info, **kwargs):
+def dpu_mesh_mask(mesh_info, **kwargs):
     '''Hide all vx in bool maks'''
     tmi = mesh_info.copy()
     mesh_mask = kwargs.get('mesh_mask', np.ones(tmi['coords'].shape[0], dtype=bool))
@@ -305,7 +305,7 @@ def dag_mesh_mask(mesh_info, **kwargs):
     return tmi
 
 
-def dag_mesh_slice(mesh_info, **kwargs):
+def dpu_mesh_slice(mesh_info, **kwargs):
     '''Slice the mesh along a plane'''
     vx_to_remove = np.zeros_like(mesh_info['x'], dtype=bool)
     for b in ['min', 'max']:
@@ -358,7 +358,7 @@ def dag_mesh_slice(mesh_info, **kwargs):
 
 # ************************************************************************
 # MESSING AROUND - WITH FLATTENING
-# def dag_sph2flat(coords):
+# def dpu_sph2flat(coords):
 #     '''https://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion'''
 #     # First move to 0,0,0...
 #     sph_centre = np.mean(coords, axis=0)
@@ -393,7 +393,7 @@ def dag_mesh_slice(mesh_info, **kwargs):
 #     # return az,elev
 #     return x,y,z
 
-def dag_dilate_and_drop(mesh_info, vx_bool_start, **kwargs):
+def dpu_dilate_and_drop(mesh_info, vx_bool_start, **kwargs):
     '''Dilate boolean array on mesh until it is contiguous
     Or until max_drop is reached (i.e., number of isolated vx is satisfactory)    
     '''
@@ -406,10 +406,10 @@ def dag_dilate_and_drop(mesh_info, vx_bool_start, **kwargs):
     while keep_going & (n_steps<100):
         # Find any isolated vx?
         if drop_isolated:
-            isolated_vx = dag_find_isolated_vx(roi_bool=vx_bool, mesh_info=mesh_info)
+            isolated_vx = dpu_find_isolated_vx(roi_bool=vx_bool, mesh_info=mesh_info)
             vx_bool[isolated_vx] = False
         # Is it contiguous?
-        vx_border = dag_find_border_vx_in_order(roi_bool=vx_bool, mesh_info=mesh_info)
+        vx_border = dpu_find_border_vx_in_order(roi_bool=vx_bool, mesh_info=mesh_info)
         if len(vx_border)==1:
             # Ok how many are we dropping?
             keep_going = False
@@ -423,7 +423,7 @@ def dag_dilate_and_drop(mesh_info, vx_bool_start, **kwargs):
                 vx_to_drop.extend(i_vx)
         if len(vx_to_drop)==0:            
             # Try again, but lets dilate the selection
-            vx_bool = dag_mesh_morph(mesh_info=mesh_info, vx_bool=vx_bool, morph=1)
+            vx_bool = dpu_mesh_morph(mesh_info=mesh_info, vx_bool=vx_bool, morph=1)
         else:
             # Try again with removeing small borders
             vx_bool[vx_to_drop] = False
@@ -438,7 +438,7 @@ def dag_dilate_and_drop(mesh_info, vx_bool_start, **kwargs):
 
 
 
-def dag_sph2flat(coords, **kwargs):
+def dpu_sph2flat(coords, **kwargs):
     '''Flatten a sphere to 2D
     This is a probably a bad way to flatten the cortex
     You should probably do proper surface cuts etc...
@@ -489,7 +489,7 @@ def dag_sph2flat(coords, **kwargs):
 from sklearn.manifold import MDS
 import scipy.sparse.csgraph as csgraph
 
-def dag_lbo_flatten(mesh_info):
+def dpu_lbo_flatten(mesh_info):
     # build adjacency‐graph
     from dpu_mini.pyctx_cannibalized.surface import Surface
     sm = Surface(mesh_info['coords'], mesh_info['faces'])
@@ -523,7 +523,7 @@ def dag_lbo_flatten(mesh_info):
 
     return u2, u3
 
-def dag_igl_flatten(mesh_info, **kwargs):
+def dpu_igl_flatten(mesh_info, **kwargs):
     '''Flatten using IGL
     '''
     centre_bool = kwargs.pop('centre_bool', 'bleep') # np.ones_like(mesh_info['x'], dtype=bool))
@@ -536,10 +536,10 @@ def dag_igl_flatten(mesh_info, **kwargs):
     n_steps = 0
     total_morph = 0
     while (not successful_flatten) & (n_steps<100):        
-        submesh_info = dag_submesh_from_mesh(mesh_info, submesh_bool=roi_bool, check_contiguous=False, **kwargs)
+        submesh_info = dpu_submesh_from_mesh(mesh_info, submesh_bool=roi_bool, check_contiguous=False, **kwargs)
         if submesh_info is None:
             # Not contiguous
-            roi_bool = dag_mesh_morph(mesh_info=mesh_info, vx_bool=roi_bool, morph=1)
+            roi_bool = dpu_mesh_morph(mesh_info=mesh_info, vx_bool=roi_bool, morph=1)
             total_morph += 1
             n_steps += 1
             continue
@@ -592,7 +592,7 @@ def dag_igl_flatten(mesh_info, **kwargs):
         # combined_output = stdout_output + stderr_output
         if (0.1>uva.max()) or (100000<uva.max()) or nans_present: #'error' in output.lower():            
             print(f'Failed to flatten, retrying with morph {total_morph}')
-            roi_bool = dag_mesh_morph(mesh_info=mesh_info, vx_bool=roi_bool, morph=1)
+            roi_bool = dpu_mesh_morph(mesh_info=mesh_info, vx_bool=roi_bool, morph=1)
             total_morph += 1
         else:
             successful_flatten = True   
@@ -600,9 +600,9 @@ def dag_igl_flatten(mesh_info, **kwargs):
             # If not, then we need to flip the orientation
             # [1] x 
             coords = submesh_info['coords']
-            p1, p2 = dag_sph2flat(coords, **kwargs)
-            corr_x = dag_get_corr(p1, uva[:,0])
-            corr_y = dag_get_corr(p2, uva[:,1])
+            p1, p2 = dpu_sph2flat(coords, **kwargs)
+            corr_x = dpu_get_corr(p1, uva[:,0])
+            corr_y = dpu_get_corr(p2, uva[:,1])
             # uva[:,0] = -1
             # if corr_x<0:
             #     uva[:,0] *= -1
@@ -614,7 +614,7 @@ def dag_igl_flatten(mesh_info, **kwargs):
             # --- NEW: align IGL result to latlon (optional) ---
             if align_to_latlon:
                 try:
-                    uva = dag_align_igl_to_latlon(
+                    uva = dpu_align_igl_to_latlon(
                         submesh_info=submesh_info, uva=uva, mesh_info=mesh_info, **kwargs)
                     print('Aligned IGL flatten to lat/lon projection (similarity transform).')
                 except Exception as e:
@@ -745,13 +745,13 @@ def align_points(a, b, align_mask=None):
 
     return b_transformed
 
-def dag_align_igl_to_latlon(submesh_info, uva, mesh_info, align_mask=None, **kwargs):
+def dpu_align_igl_to_latlon(submesh_info, uva, mesh_info, align_mask=None, **kwargs):
     """
     Rotate to align with the sphere method 
     """
     # Compute lat/lon flatten for the submesh vertices (target)
     coords = submesh_info['coords']
-    p1, p2 = dag_sph2flat(coords, **kwargs)
+    p1, p2 = dpu_sph2flat(coords, **kwargs)
     a = np.vstack([p1, p2]).T  # (m,2)
     b = uva[:,:2]
     b_updated = align_points(a,b, align_mask=align_mask)
@@ -762,7 +762,7 @@ def dag_align_igl_to_latlon(submesh_info, uva, mesh_info, align_mask=None, **kwa
     return uva_out
 
 import copy
-def dag_flatten(mesh_info, **kwargs):
+def dpu_flatten(mesh_info, **kwargs):
     '''Take the spherical coordinates
     This is a bad way to flatten the sphere - you should probably do proper surface cuts etc...    
     flatten them to 2D (just polar)
@@ -773,19 +773,19 @@ def dag_flatten(mesh_info, **kwargs):
     z = kwargs.get('z', 0)
     flat_info = {}
     if method=='latlon':
-        p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
+        p1, p2 = dpu_sph2flat(mesh_info['coords'], **kwargs)
     elif method=='igl':
         # try:
-        p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
+        p1, p2 = dpu_sph2flat(mesh_info['coords'], **kwargs)
         initial_guess = np.vstack([p1,p2]).T        
-        p1, p2, vx_to_include_IGL, face_to_include_IGL = dag_igl_flatten(mesh_info,initial_guess=initial_guess, **kwargs)
+        p1, p2, vx_to_include_IGL, face_to_include_IGL = dpu_igl_flatten(mesh_info,initial_guess=initial_guess, **kwargs)
         vx_to_include = vx_to_include_IGL
         f_to_include = face_to_include_IGL
         # except:
-        # p1, p2 = dag_sph2flat(mesh_info['coords'], **kwargs)
+        # p1, p2 = dpu_sph2flat(mesh_info['coords'], **kwargs)
         
     elif method=='lbo':
-        p1, p2 = dag_lbo_flatten(mesh_info)
+        p1, p2 = dpu_lbo_flatten(mesh_info)
     elif method == 'none':
         p1 = mesh_info['coords'][:,0]
         p2 = mesh_info['coords'][:,1]
@@ -842,20 +842,20 @@ def dag_flatten(mesh_info, **kwargs):
     polys = flat_info['faces']
     return pts, polys, vx_to_include
 
-def dag_is_contiguous(mesh_info, vx_bool):
+def dpu_is_contiguous(mesh_info, vx_bool):
     '''Check if the mesh is contiguous'''
-    vx_border = dag_find_border_vx_in_order(roi_bool=vx_bool, mesh_info=mesh_info)
+    vx_border = dpu_find_border_vx_in_order(roi_bool=vx_bool, mesh_info=mesh_info)
     return vx_border
 
-def dag_morph_roi(gm, roi_bool, morph=0, **kwargs):
+def dpu_morph_roi(gm, roi_bool, morph=0, **kwargs):
     rb_L = roi_bool[:gm.n_vx['lh']]
     rb_R = roi_bool[gm.n_vx['lh']:]
-    rb_L = dag_mesh_morph(gm.mesh_info['pial']['lh'], rb_L, morph=morph)
-    rb_R = dag_mesh_morph(gm.mesh_info['pial']['rh'], rb_R, morph=morph)
+    rb_L = dpu_mesh_morph(gm.mesh_info['pial']['lh'], rb_L, morph=morph)
+    rb_R = dpu_mesh_morph(gm.mesh_info['pial']['rh'], rb_R, morph=morph)
     roi_morphed = np.concatenate([rb_L, rb_R])
     return roi_morphed
 
-def dag_submesh_from_mesh(mesh_info, submesh_bool, **kwargs):
+def dpu_submesh_from_mesh(mesh_info, submesh_bool, **kwargs):
     '''Create a submesh from a mesh
     '''
     check_contiguous = kwargs.get('check_contiguous', 'message')
@@ -864,13 +864,13 @@ def dag_submesh_from_mesh(mesh_info, submesh_bool, **kwargs):
     morph = kwargs.get('morph', 0)
     # Check is contiguous?
     if check_contiguous:
-        vx_border = dag_find_border_vx_in_order(roi_bool=submesh_bool, mesh_info=mesh_info)
+        vx_border = dpu_find_border_vx_in_order(roi_bool=submesh_bool, mesh_info=mesh_info)
         if len(vx_border)!=1:
             print('Submesh is not contiguous')
             return None
         
     if morph!=0:
-        submesh_bool = dag_mesh_morph(mesh_info=mesh_info, vx_bool=submesh_bool, morph=morph)
+        submesh_bool = dpu_mesh_morph(mesh_info=mesh_info, vx_bool=submesh_bool, morph=morph)
 
     submesh = {
         'full_mesh': copy.deepcopy(mesh_info),
@@ -922,10 +922,10 @@ def dag_submesh_from_mesh(mesh_info, submesh_bool, **kwargs):
         # if remove_missing_vx:            
         #     print('re running with missing vx removed')
         #     submesh_bool[missing_vx] = False
-        #     submesh = dag_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
+        #     submesh = dpu_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
     return submesh
 
-def dag_mesh_morph(mesh_info, vx_bool, morph=1):
+def dpu_mesh_morph(mesh_info, vx_bool, morph=1):
     ''' Dilate/erode the mesh from the border by buffer_n
     Dilate  (+ve) - 1 find faces in the border and add the neighbours
     Erode   (-ve) - 1 find faces in the border and remove the neighbours
@@ -933,7 +933,7 @@ def dag_mesh_morph(mesh_info, vx_bool, morph=1):
     vx_bool_loop = vx_bool.copy()
     while np.abs(morph)>0:
         if morph<0:
-            vx_border = dag_find_border_vx(roi_bool=vx_bool_loop, mesh_info=mesh_info)
+            vx_border = dpu_find_border_vx(roi_bool=vx_bool_loop, mesh_info=mesh_info)
             # Remove the vx in the border
             vx_bool_loop[vx_border] = False
             morph += 1
@@ -955,7 +955,7 @@ def dag_mesh_morph(mesh_info, vx_bool, morph=1):
 
 
 
-def dag_cut_box(mesh_info, **kwargs):
+def dpu_cut_box(mesh_info, **kwargs):
     '''Find vx to cut for a box
 
     '''
@@ -992,7 +992,7 @@ def dag_cut_box(mesh_info, **kwargs):
     return vx_to_include
 
 # ************************************************************************
-def dag_plotly_eye(el, az, zoom):
+def dpu_plotly_eye(el, az, zoom):
     # x = zoom*np.cos(np.radians(el))*np.cos(np.radians(az))
     # y = zoom*np.cos(np.radians(el))*np.sin(np.radians(az))
     # z = zoom*np.sin(np.radians(el))
@@ -1007,7 +1007,7 @@ def dag_plotly_eye(el, az, zoom):
     return x,y,z
 
 # ************************************************************************
-def dag_ply_write(mesh_info, diplay_rgb=None, hemi=None, values=None, incl_rgb=True, x_offset=None):
+def dpu_ply_write(mesh_info, diplay_rgb=None, hemi=None, values=None, incl_rgb=True, x_offset=None):
     n_vx = mesh_info['x'].shape[0]
     n_f = mesh_info['i'].shape[0]
     if not isinstance(values, np.ndarray):
@@ -1049,9 +1049,9 @@ def dag_ply_write(mesh_info, diplay_rgb=None, hemi=None, values=None, incl_rgb=T
 
     return ply_str
 
-def dag_get_rgb_str(rgb_vals):
+def dpu_get_rgb_str(rgb_vals):
     '''
-    dag_srf_to_ply
+    dpu_srf_to_ply
     Convert srf file to .ply
     
     '''
@@ -1062,9 +1062,9 @@ def dag_get_rgb_str(rgb_vals):
         rgb_str += f'{rgb_vals[v_idx][0]},{rgb_vals[v_idx][1]},{rgb_vals[v_idx][2]}\n'
     return rgb_str    
 
-def dag_obj_write(mesh_info, **kwargs):
+def dpu_obj_write(mesh_info, **kwargs):
     '''
-    dag_obj_write
+    dpu_obj_write
     Convert mesh_info to .obj file
     '''
     x_offset = kwargs.get('x_offset', 0)
@@ -1085,7 +1085,7 @@ def dag_obj_write(mesh_info, **kwargs):
     return obj_str
 
 
-def dag_fs_write(mesh_info, output_file, **kwargs):
+def dpu_fs_write(mesh_info, output_file, **kwargs):
 
     pts = mesh_info['coords'].copy() 
     # pts[:,0] -= 100 
@@ -1114,14 +1114,14 @@ def dag_fs_write(mesh_info, output_file, **kwargs):
         fp.write(polys.astype(np.uint32).byteswap().tostring())
         fp.write(b'\n')
         if mesh_info['volume_info']!={}:
-            fp.write(dag_serialize_volume_info(mesh_info['volume_info']))
+            fp.write(dpu_serialize_volume_info(mesh_info['volume_info']))
 
     print(f"Surface file '{output_file}'")
 
 # ************************************************************************
-def dag_vtk_to_ply(vtk_file):
+def dpu_vtk_to_ply(vtk_file):
     '''
-    dag_vtk_to_ply
+    dpu_vtk_to_ply
     Convert .vtk file to .ply
     
     '''
@@ -1161,7 +1161,7 @@ def dag_vtk_to_ply(vtk_file):
 
     # save the ply file
     ply_file = vtk_file.replace('.vtk', '.ply')
-    dag_str2file(filename=ply_file, txt=ply_str)
+    dpu_str2file(filename=ply_file, txt=ply_str)
 
 
 

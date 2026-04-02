@@ -17,7 +17,7 @@ class FSMaker(object):
     saved as the relevant command
     '''
     def __init__(self, sub, fs_dir=os.environ['SUBJECTS_DIR'], **kwargs):
-        sub = dag_hyphen_parse('sub', sub)
+        sub = dpu_hyphen_parse('sub', sub)
         self.sub = sub        
         self.fs_dir = fs_dir        # Where the freesurfer files are        
         print(f'Using fs dir = {self.fs_dir}')
@@ -25,7 +25,7 @@ class FSMaker(object):
         self.sub_label_dir = opj(fs_dir, sub, 'label')
         #
         self.custom_surf_dir = opj(self.sub_surf_dir, 'custom')         # Where to put the surfaces we make
-        n_vx, n_faces = dag_load_nfaces_nverts(self.sub, self.fs_dir)
+        n_vx, n_faces = dpu_load_nfaces_nverts(self.sub, self.fs_dir)
         self.n_vx = {'lh':n_vx[0], 'rh':n_vx[1]}
         self.total_n_vx = sum(n_vx)
         lhm,rhm = np.zeros(self.total_n_vx, dtype=bool),np.zeros(self.total_n_vx, dtype=bool)
@@ -79,7 +79,7 @@ class FSMaker(object):
         # # vmin = kwargs.get('vmin', np.percentile(data[data_mask], 10))
         vmin = kwargs.get('vmin', np.nanmin(data[data_mask]))
         # Get the overlay custom str and overlay to save...
-        overlay_custom_str, overlay_to_save = dag_make_overlay_str(masked_data=data[data_mask], **kwargs)
+        overlay_custom_str, overlay_to_save = dpu_make_overlay_str(masked_data=data[data_mask], **kwargs)
         
         data_masked = np.zeros_like(data, dtype=float)
         data_masked[data_mask] = data[data_mask]
@@ -96,19 +96,19 @@ class FSMaker(object):
         # now save results as a curve file
         print(f'Saving {surf_name} in {self.custom_surf_dir}')
 
-        n_faces = dag_load_nfaces(self.sub, self.fs_dir)
-        dag_write_curv(
+        n_faces = dpu_load_nfaces(self.sub, self.fs_dir)
+        dpu_write_curv(
             fn=opj(self.custom_surf_dir, f'lh.{surf_name}'), 
             curv=lh_masked_param, 
             fnum=n_faces[0])
-        dag_write_curv(
+        dpu_write_curv(
             fn=opj(self.custom_surf_dir, f'rh.{surf_name}'), 
             curv=rh_masked_param, 
             fnum=n_faces[1])        
         # write_morph_data(opj(self.custom_surf_dir, f'lh.{surf_name}'),lh_masked_param)
         # write_morph_data(opj(self.custom_surf_dir, f'rh.{surf_name}'),rh_masked_param)        
         
-        dag_str2file(filename=opj(self.custom_surf_dir, f'{surf_name}_overlay'),txt=overlay_to_save)
+        dpu_str2file(filename=opj(self.custom_surf_dir, f'{surf_name}_overlay'),txt=overlay_to_save)
         self.overlay_str[surf_name] = overlay_custom_str        
 
         # Check, if it is already in the surf list:
@@ -129,7 +129,7 @@ class FSMaker(object):
         subprocess.run(fs_cmd, shell=True, cwd=self.sub_surf_dir)   
 
     def open_fs_surface_FIND(self, include=[], exclude=[], **kwargs):
-        surf_name = dag_find_file_in_folder(
+        surf_name = dpu_find_file_in_folder(
             filt=include,
             path=self.surf_list,
             exclude=exclude,
@@ -146,7 +146,7 @@ class FSMaker(object):
         cmd_name = kwargs.get('cmd_name', f'{surf_name}_cmd.txt')
         print(f'Custom overlay string saved here: ({opj(self.custom_surf_dir, cmd_name)})')
         fs_cmd = self.write_fs_cmd(surf_name=surf_name, **kwargs)
-        dag_str2file(filename=opj(self.custom_surf_dir, cmd_name),txt=fs_cmd)
+        dpu_str2file(filename=opj(self.custom_surf_dir, cmd_name),txt=fs_cmd)
         
     def write_fs_cmd(self, surf_name=[], **kwargs):
         '''
@@ -256,7 +256,7 @@ class FSMaker(object):
                 if do_rois:
                     for i_roi, roi in enumerate(sorted_roi_list[this_hemi]):
                         if roi_col_spec is None:
-                            roi_col = dag_get_col_vals(i_roi, 'jet', 0, len(roi_list))
+                            roi_col = dpu_get_col_vals(i_roi, 'jet', 0, len(roi_list))
                             roi_col = f'{int(roi_col[0]*255)},{int(roi_col[1]*255)},{int(roi_col[2]*255)}'
                         else:
                             roi_col = roi_col_spec
@@ -299,7 +299,7 @@ class FSMaker(object):
             roi_list = [roi_list]
         for roi_name in roi_list:
             for hemi in ['lh', 'rh']:
-                this_roi_path = dag_find_file_in_folder(
+                this_roi_path = dpu_find_file_in_folder(
                     filt=[roi_name, hemi],
                     path=self.sub_label_dir,
                     recursive=True,
@@ -315,7 +315,7 @@ class FSMaker(object):
         return sorted_roi_list
 
     def get_roi_file(self, roi_name, hemi):
-        roi = dag_find_file_in_folder(
+        roi = dpu_find_file_in_folder(
             filt=[roi_name, hemi],
             path=self.sub_label_dir,
             recursive=True,
@@ -333,7 +333,7 @@ class FSMaker(object):
             pass
         else: 
             # Now we need to look a bit deeper
-            this_surf_path = dag_find_file_in_folder(
+            this_surf_path = dpu_find_file_in_folder(
                 filt=[this_hemi, f'.{this_surf_name}'],
                 exclude=['pial'],
                 path=self.sub_surf_dir,
@@ -353,7 +353,7 @@ class FSMaker(object):
             return overlay_str_ow
         
         if overlay_cmap is not None:
-            overlay_str, _ = dag_make_overlay_str(cmap=overlay_cmap, **kwargs)
+            overlay_str, _ = dpu_make_overlay_str(cmap=overlay_cmap, **kwargs)
             return overlay_str
         if surf_name in self.overlay_str.keys():
             overlay_str = self.overlay_str[surf_name]
@@ -363,7 +363,7 @@ class FSMaker(object):
         overlay_str = ':overlay_custom='            
         print(f'{surf_name} not in dict')
         print(f'Checking custom surf dir')
-        overlay_str_file = dag_find_file_in_folder(
+        overlay_str_file = dpu_find_file_in_folder(
             filt=[surf_name, 'overlay'],
             path=self.sub_surf_dir,
             recursive=True,
@@ -400,7 +400,7 @@ class FSMaker(object):
             print('Removing nothing')
             return
 
-        surf_list = dag_find_file_in_folder(
+        surf_list = dpu_find_file_in_folder(
             filt = include,
             path=self.custom_surf_dir,
             exclude = exclude, 
@@ -429,21 +429,21 @@ class FSMaker(object):
 # ************************************************************************
 # ************************************************************************
 # *************************** SUPPORTING FUNCTIONS ***********************
-def dag_load_nverts(sub, fs_dir = os.environ['SUBJECTS_DIR']):    
+def dpu_load_nverts(sub, fs_dir = os.environ['SUBJECTS_DIR']):    
     '''
     nverts (points) in a given mesh
     '''
-    n_verts, n_faces = dag_load_nfaces_nverts(sub, fs_dir)
+    n_verts, n_faces = dpu_load_nfaces_nverts(sub, fs_dir)
     return n_verts
 
-def dag_load_nfaces(sub, fs_dir=os.environ['SUBJECTS_DIR']):
+def dpu_load_nfaces(sub, fs_dir=os.environ['SUBJECTS_DIR']):
     '''
     nfaces (triangular) in a given mesh
     '''
-    n_verts, n_faces = dag_load_nfaces_nverts(sub, fs_dir)
+    n_verts, n_faces = dpu_load_nfaces_nverts(sub, fs_dir)
     return n_faces
 
-def dag_load_nfaces_nverts(sub, fs_dir=os.environ['SUBJECTS_DIR']):
+def dpu_load_nfaces_nverts(sub, fs_dir=os.environ['SUBJECTS_DIR']):
     """
     Adapted from pycortex https://github.com/gallantlab/pycortex
     Load the number of vertices and faces in a given mesh
@@ -463,7 +463,7 @@ def dag_load_nfaces_nverts(sub, fs_dir=os.environ['SUBJECTS_DIR']):
     return n_verts, n_faces
 
 
-def dag_load_roi(sub, roi, fs_dir=os.environ['SUBJECTS_DIR'], split_LR=False, do_bool=True, **kwargs):
+def dpu_load_roi(sub, roi, fs_dir=os.environ['SUBJECTS_DIR'], split_LR=False, do_bool=True, **kwargs):
     '''
     Return a boolean array of voxels included in the specified roi
     array is vector with each entry corresponding to a point on the subjects cortical surface
@@ -477,7 +477,7 @@ def dag_load_roi(sub, roi, fs_dir=os.environ['SUBJECTS_DIR'], split_LR=False, do
     need_both_hemis = kwargs.get('need_both_hemis', False) # Need ROI in both hemispheres to return true
     combine_matches = kwargs.get('combine_matches', False) # If multiple matches combine them...    
     # Get number of vx in each hemi, and total overall...
-    n_verts = dag_load_nverts(sub=sub, fs_dir=fs_dir)
+    n_verts = dpu_load_nverts(sub=sub, fs_dir=fs_dir)
     total_num_vx = np.sum(n_verts)
     
     # ****************************************
@@ -529,10 +529,10 @@ def dag_load_roi(sub, roi, fs_dir=os.environ['SUBJECTS_DIR'], split_LR=False, do
         roi_file = {}
         missing_hemi = False # Do we have an ROI for both hemis? 
         for hemi in ['lh', 'rh']:
-            roi_file[hemi] = dag_find_file_in_folder([this_roi, '.thresh', '.label', hemi], roi_dir, recursive=True, return_msg=None)
+            roi_file[hemi] = dpu_find_file_in_folder([this_roi, '.thresh', '.label', hemi], roi_dir, recursive=True, return_msg=None)
             # Didn't find it? Try again without "thresh"
             if roi_file[hemi] is None:
-                roi_file[hemi] = dag_find_file_in_folder([this_roi, '.label', hemi], roi_dir,exclude='._', recursive=True, return_msg = None)                
+                roi_file[hemi] = dpu_find_file_in_folder([this_roi, '.label', hemi], roi_dir,exclude='._', recursive=True, return_msg = None)                
             # Did we find it now? 
             if roi_file[hemi] is None:
                 # If not make a note - no entry for this hemi
@@ -609,13 +609,13 @@ def dag_load_roi(sub, roi, fs_dir=os.environ['SUBJECTS_DIR'], split_LR=False, do
     else:
         return roi_idx
 
-def dag_roi_list_expand(sub, roi_list, fs_dir=os.environ['SUBJECTS_DIR'] ):
+def dpu_roi_list_expand(sub, roi_list, fs_dir=os.environ['SUBJECTS_DIR'] ):
     if not isinstance(roi_list, list):
         roi_list = [roi_list]
     roi_dir = opj(fs_dir, sub, 'label')    
     roi_list_expanded = []
     for roi in roi_list:                
-        roi_files = dag_find_file_in_folder([roi, '.label'], roi_dir,exclude='._', recursive=True, return_msg = None)                        
+        roi_files = dpu_find_file_in_folder([roi, '.label'], roi_dir,exclude='._', recursive=True, return_msg = None)                        
         for this_roi_file in roi_files:
             this_roi_file = this_roi_file.split('/')[-1]
             this_roi_file = this_roi_file.replace('.label', '')
@@ -636,7 +636,7 @@ def dag_roi_list_expand(sub, roi_list, fs_dir=os.environ['SUBJECTS_DIR'] ):
                 roi_list_expanded[i] = roi + '.'
     return roi_list_expanded
 
-def dag_write_curv(fn, curv, fnum):
+def dpu_write_curv(fn, curv, fnum):
     ''' Adapted from https://github.com/simnibs/simnibs
     
     Writes a freesurfer .curv file
@@ -668,7 +668,7 @@ def dag_write_curv(fn, curv, fnum):
         f.write(struct.pack('>i', 1))
         f.write(curv.astype('>f').tobytes())
 
-def dag_make_overlay_str(**kwargs):        
+def dpu_make_overlay_str(**kwargs):        
     masked_data = kwargs.get('masked_data', None)
     cmap = kwargs.get('cmap', 'viridis')    
     if masked_data is not None:
@@ -684,7 +684,7 @@ def dag_make_overlay_str(**kwargs):
     # value - rgb triple...
     fv_param_steps = np.linspace(vmin, vmax, cmap_nsteps)
     fv_color_steps = np.linspace(0,1, cmap_nsteps)
-    fv_cmap = dag_cmap_from_str(cmap, **kwargs)
+    fv_cmap = dpu_cmap_from_str(cmap, **kwargs)
     # fv_cmap = mpl.cm.__dict__[cmap]
     
     ## make colorbar - uncomment to save a png of the color bar...
@@ -736,7 +736,7 @@ def dag_make_overlay_str(**kwargs):
 # STUFF COPIED FROM NIBABEL
 # ***********************************************************************************************************************
 
-def dag_serialize_volume_info(volume_info):
+def dpu_serialize_volume_info(volume_info):
     """Copied from from https://github.com/nipy/nibabel/blob/master/nibabel/freesurfer/io.py
     Helper for serializing the volume info.
     """
@@ -765,7 +765,7 @@ def dag_serialize_volume_info(volume_info):
             strings.append(f'{key:6s} = {val[0]:.10g} {val[1]:.10g} {val[2]:.10g}\n'.encode())
     return b''.join(strings)
 
-def dag_fread3(fobj):
+def dpu_fread3(fobj):
     """Read a 3-byte int from an open binary file object
 
     Parameters
@@ -782,7 +782,7 @@ def dag_fread3(fobj):
     return (b1 << 16) + (b2 << 8) + b3
 
 
-def dag_read_fs_mesh(filepath, return_xyz=False, return_info=True):
+def dpu_read_fs_mesh(filepath, return_xyz=False, return_info=True):
     """Adapted from https://github.com/nipy/nibabel/blob/master/nibabel/freesurfer/io.py
     ...
     Read a triangular format Freesurfer surface mesh.
@@ -803,7 +803,7 @@ def dag_read_fs_mesh(filepath, return_xyz=False, return_info=True):
     TRIANGLE_MAGIC = 16777214
     with open(filepath, 'rb') as fobj:
 
-        magic = dag_fread3(fobj)
+        magic = dpu_fread3(fobj)
         create_stamp = fobj.readline().rstrip(b'\n').decode('utf-8')
         fobj.readline()
         vnum = np.fromfile(fobj, '>i4', 1)[0]
@@ -811,7 +811,7 @@ def dag_read_fs_mesh(filepath, return_xyz=False, return_info=True):
         coords = np.fromfile(fobj, '>f4', vnum * 3).reshape(vnum, 3)
         faces = np.fromfile(fobj, '>i4', fnum * 3).reshape(fnum, 3)
         if return_info:
-            volume_info = dag_read_volume_info(fobj)        
+            volume_info = dpu_read_volume_info(fobj)        
         else:
             volume_info = {}
 
@@ -836,7 +836,7 @@ def dag_read_fs_mesh(filepath, return_xyz=False, return_info=True):
 
     return mesh_info
 
-def dag_read_volume_info(fobj):
+def dpu_read_volume_info(fobj):
     """Copied from from https://github.com/nipy/nibabel/blob/master/nibabel/freesurfer/io.py
     Helper for reading the footer from a surface file.
     """
@@ -862,7 +862,7 @@ def dag_read_volume_info(fobj):
     # Ignore the rest
     return volume_info
 
-def dag_serialize_volume_info(volume_info):
+def dpu_serialize_volume_info(volume_info):
     """Copied from from https://github.com/nipy/nibabel/blob/master/nibabel/freesurfer/io.py
     Helper for serializing the volume info.
     """
@@ -893,7 +893,7 @@ def dag_serialize_volume_info(volume_info):
 # ***
 
 
-def dag_read_fs_curv_file(curv_file):
+def dpu_read_fs_curv_file(curv_file):
     with open(curv_file, 'rb') as h_us:
         h_us.seek(15)
         # curv_vals = np.fromstring(h_us.read(), dtype='>f4').byteswap().newbyteorder()

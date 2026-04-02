@@ -12,7 +12,7 @@ opj = os.path.join
 
 import numpy as np
 
-from dpu_mini.utils import dag_find_file_in_folder, dag_arg_checker, dag_hyphen_parse
+from dpu_mini.utils import dpu_find_file_in_folder, dpu_arg_checker, dpu_hyphen_parse
 from dpu_mini.fs_tools import FSMaker
 
 
@@ -44,11 +44,11 @@ def main(argv):
             sys.exit()
         elif '--' in arg: # ********** ARBITRARY KWARGS **********
             # If argv[i] is an argument, then argv[i+1] is its value
-            this_kwarg_value = dag_arg_checker(argv, i+1)
+            this_kwarg_value = dpu_arg_checker(argv, i+1)
             # Add to kwargs
             this_kwarg = arg.replace('--','')
             kwargs[this_kwarg] = this_kwarg_value
-    sub = dag_hyphen_parse('sub', sub)
+    sub = dpu_hyphen_parse('sub', sub)
     # [3] Check the arguments
     if sub is None:
         raise ValueError('Subject number not specified')
@@ -80,7 +80,7 @@ def main(argv):
         else:
             search_dir = fs.sub_surf_dir
         # Find the surfaces
-        surf_list = dag_find_file_in_folder(
+        surf_list = dpu_find_file_in_folder(
             filt = search_incl,
             path=search_dir,
             exclude = search_excl + ['rh.', 'overlay', '.png'], # exclude right hemisphere in search to avoid duplicates

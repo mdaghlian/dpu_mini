@@ -16,12 +16,12 @@ from dpu_mini.cmap_functions import *
 default_ecc_bounds =  np.linspace(0, 5, 7)
 default_pol_bounds = np.linspace(-np.pi, np.pi, 13)
 
-# def dag_rm_dag_cmaps_from_mpl():
+# def dpu_rm_dpu_cmaps_from_mpl():
 #     # Add to matplotlib cmaps?
 #     for cm_name in custom_col_dict.keys():
 #         plt.unregister_cmap(cm_name)
 
-def dag_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
+def dpu_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
     ax = kwargs.get('ax', None)
     return_ax = kwargs.get('return_ax', False)
     return_fig = kwargs.get('return_fig', False)
@@ -29,9 +29,9 @@ def dag_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
     default_fig_size = {'linear':(10,2), 'pol':(5,5), 'ecc' : (5,5)}    
 
     try:
-        cmap = dag_get_cmap(cmap)
+        cmap = dpu_get_cmap(cmap)
     except:
-        cmap = dag_cmap_from_str(cmap)
+        cmap = dpu_cmap_from_str(cmap)
 
     if ax is None:
         figsize = kwargs.get('figsize', default_fig_size[plot_type])
@@ -59,7 +59,7 @@ def dag_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
             )
         ax.set_title(title)
         ax.set_yticks([])
-        # dag_update_ax_fontsize(ax, 20)
+        # dpu_update_ax_fontsize(ax, 20)
     elif plot_type=='ecc':
         pol = np.linspace(-np.pi, np.pi, 100)
         ecc_vmax = 5 if vmax is None else vmax
@@ -71,24 +71,24 @@ def dag_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
             )
         ax.set_title(title)
         ax.set_xticks([])
-        # dag_update_ax_fontsize(ax, 20)        
+        # dpu_update_ax_fontsize(ax, 20)        
 
     ax.set_title(title)
-    # dag_update_ax_fontsize(ax, 20)
+    # dpu_update_ax_fontsize(ax, 20)
     if return_ax:
         return ax
     if return_fig:
         return fig
     
 
-def dag_add_dag_cmaps_to_mpl():
+def dpu_add_dpu_cmaps_to_mpl():
     # Add to matplotlib cmaps?
     for cm_name in custom_col_dict.keys():
-        this_cm = dag_get_cmap(cm_name)
+        this_cm = dpu_get_cmap(cm_name)
         mpl.colormaps.register(cmap=this_cm)
 
-def dag_add_ecc_pol_lines(ax, **kwargs):
-    '''dag_add_ecc_pol_lines    
+def dpu_add_ecc_pol_lines(ax, **kwargs):
+    '''dpu_add_ecc_pol_lines    
     Description:
         Add eccentricity and polar lines to a plot
         Useful for plotting visual field
@@ -182,8 +182,8 @@ def dag_add_ecc_pol_lines(ax, **kwargs):
     y_low, y_high = ax.get_ylim()
     ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*ratio) 
 
-def dag_add_ax_basics(ax, **kwargs):    
-    '''dag_add_ax_basics
+def dpu_add_ax_basics(ax, **kwargs):    
+    '''dpu_add_ax_basics
     Description:
         Add basic features to a plot
         
@@ -218,8 +218,8 @@ def dag_add_ax_basics(ax, **kwargs):
 
 
 
-def dag_update_fig_fontsize(fig, new_font_size, **kwargs):
-    '''dag_update_fig_fontsize
+def dpu_update_fig_fontsize(fig, new_font_size, **kwargs):
+    '''dpu_update_fig_fontsize
     Description:
         Update the font size of a figure
     Input:
@@ -231,12 +231,12 @@ def dag_update_fig_fontsize(fig, new_font_size, **kwargs):
     fig_kids = fig.get_children() # Get the children of the figure, i.e., the axes
     for i_kid in fig_kids: # Loop through the children
         if isinstance(i_kid, mpl.axes.Axes): # If the child is an axes, update the font size of the axes
-            dag_update_ax_fontsize(i_kid, new_font_size, **kwargs)
+            dpu_update_ax_fontsize(i_kid, new_font_size, **kwargs)
         elif isinstance(i_kid, mpl.text.Text): # If the child is a text, update the font size of the text
             i_kid.set_fontsize(new_font_size)            
 
-def dag_update_ax_fontsize(ax, new_font_size, include=None, do_extra_search=True):
-    '''dag_update_ax_fontsize
+def dpu_update_ax_fontsize(ax, new_font_size, include=None, do_extra_search=True):
+    '''dpu_update_ax_fontsize
     Description:
         Update the font size of am axes
     Input:
@@ -283,8 +283,8 @@ def dag_update_ax_fontsize(ax, new_font_size, include=None, do_extra_search=True
 
 
 
-def dag_update_ax_dotsize(ax, new_dot_size):
-    '''dag_update_ax_dotsize
+def dpu_update_ax_dotsize(ax, new_dot_size):
+    '''dpu_update_ax_dotsize
     Description:
         Update the dot size of an axes
     Input:
@@ -302,8 +302,8 @@ def dag_update_ax_dotsize(ax, new_dot_size):
             i_kid.set_markersize(np.array([new_dot_size]))
 
 
-def dag_update_fig_dotsize(fig, new_dot_size):
-    '''dag_update_fig_dotsize
+def dpu_update_fig_dotsize(fig, new_dot_size):
+    '''dpu_update_fig_dotsize
     Description:
         Update the dot size of a figure
     Input:
@@ -315,12 +315,12 @@ def dag_update_fig_dotsize(fig, new_dot_size):
     for i_kid in fig.get_children():
         # print(i_kid)
         if isinstance(i_kid, mpl.axes.Axes):
-            dag_update_ax_dotsize(i_kid, new_dot_size)
+            dpu_update_ax_dotsize(i_kid, new_dot_size)
         elif isinstance(i_kid, mpl.figure.SubFigure):
-            dag_update_fig_dotsize(i_kid, new_dot_size)
+            dpu_update_fig_dotsize(i_kid, new_dot_size)
 
 
-def dag_return_ecc_pol_bin_mid_pts(ecc4bin, pol4bin, **kwargs):
+def dpu_return_ecc_pol_bin_mid_pts(ecc4bin, pol4bin, **kwargs):
     ecc_bounds = kwargs.get("ecc_bounds", default_ecc_bounds)
     pol_bounds = kwargs.get("pol_bounds", default_pol_bounds)            
 
@@ -347,7 +347,7 @@ def dag_return_ecc_pol_bin_mid_pts(ecc4bin, pol4bin, **kwargs):
 
             ecc_mid = (ecc_lower + ecc_upper) / 2                    
             pol_mid = (pol_lower + pol_upper) / 2
-            mid_x, mid_y = dag_coord_convert(ecc_mid, pol_mid, 'pol2cart')
+            mid_x, mid_y = dpu_coord_convert(ecc_mid, pol_mid, 'pol2cart')
             if bin_idx.sum()==0:
                 bin_mid_x[i_ecc, i_pol] = np.nan
                 bin_mid_y[i_ecc, i_pol] = np.nan
@@ -364,8 +364,8 @@ def dag_return_ecc_pol_bin_mid_pts(ecc4bin, pol4bin, **kwargs):
 
     return bin_mid_x, bin_mid_y
 
-def dag_return_ecc_pol_bin(params2bin, ecc4bin, pol4bin, bin_weight=None, **kwargs):
-    '''dag_return_ecc_pol_bin
+def dpu_return_ecc_pol_bin(params2bin, ecc4bin, pol4bin, bin_weight=None, **kwargs):
+    '''dpu_return_ecc_pol_bin
     Description:
         Bin parameters by eccentricity and polar angle
     Input:
@@ -429,8 +429,8 @@ def dag_return_ecc_pol_bin(params2bin, ecc4bin, pol4bin, bin_weight=None, **kwar
         params_binned = params_binned[0] 
     return params_binned
 
-def dag_visual_field_scatter(dot_x, dot_y, **kwargs):
-    '''dag_visual_field_scatter
+def dpu_visual_field_scatter(dot_x, dot_y, **kwargs):
+    '''dpu_visual_field_scatter
     Description:
         Plot a scatter of points on a visual field (e.g., size, rsquared etc)
         With the option to do various creative things. e.g., binning, color coding, etc
@@ -479,20 +479,20 @@ def dag_visual_field_scatter(dot_x, dot_y, **kwargs):
     if (len(dot_props['dot_col'])==len(dot_x)) & (dot_props['dot_cmap']==None):
         dot_props['dot_cmap'] = 'viridis'
     if dot_props['dot_cmap'] != None:
-        dot_props['dot_cmap'] = dag_get_cmap(dot_props['dot_cmap'])
+        dot_props['dot_cmap'] = dpu_get_cmap(dot_props['dot_cmap'])
 
     bin_dot_props = {}
     if do_binning:
-        dot_ecc, dot_pol = dag_coord_convert(dot_x,dot_y,old2new="cart2pol")
+        dot_ecc, dot_pol = dpu_coord_convert(dot_x,dot_y,old2new="cart2pol")
         if fix_bin_xy:
-            bin_x, bin_y = dag_return_ecc_pol_bin_mid_pts(
+            bin_x, bin_y = dpu_return_ecc_pol_bin_mid_pts(
                 ecc4bin=dot_ecc, 
                 pol4bin=dot_pol, 
                 ecc_bounds=ecc_bounds, 
                 pol_bounds=pol_bounds,
             )
         else:
-            bin_x, bin_y = dag_return_ecc_pol_bin(
+            bin_x, bin_y = dpu_return_ecc_pol_bin(
                 params2bin=[dot_x, dot_y], 
                 ecc4bin=dot_ecc, 
                 pol4bin=dot_pol, 
@@ -506,7 +506,7 @@ def dag_visual_field_scatter(dot_x, dot_y, **kwargs):
             elif len(dot_props[p])!=len(dot_x):
                 bin_dot_props[p] = dot_props[p]
             else:
-                bin_dot_props[p] = dag_return_ecc_pol_bin(
+                bin_dot_props[p] = dpu_return_ecc_pol_bin(
                     params2bin=dot_props[p], 
                     ecc4bin=dot_ecc, 
                     pol4bin=dot_pol, 
@@ -560,12 +560,12 @@ def dag_visual_field_scatter(dot_x, dot_y, **kwargs):
     if not isinstance(bin_dot_props['dot_col'], str):
         fig = plt.gcf()
         cb = fig.colorbar(scat_col, ax=ax)        
-    dag_add_ecc_pol_lines(ax, ecc_bounds=ecc_bounds, pol_bounds=pol_bounds)    
-    dag_add_ax_basics(**kwargs)    
+    dpu_add_ecc_pol_lines(ax, ecc_bounds=ecc_bounds, pol_bounds=pol_bounds)    
+    dpu_add_ax_basics(**kwargs)    
     return ax, cb
 
-def dag_plot_bin_line(ax, X,Y, bin_using, **kwargs):    
-    '''dag_plot_bin_line
+def dpu_plot_bin_line(ax, X,Y, bin_using, **kwargs):    
+    '''dpu_plot_bin_line
     Description:
         Plot X vs Y binned by "bin_using" 
 
@@ -580,7 +580,7 @@ def dag_plot_bin_line(ax, X,Y, bin_using, **kwargs):
         lw              float           line width
         n_bins          int             number of bins
         bins            np.ndarray      bin edges
-        do_basics       bool            Whether to add basic features to the plot (i.e., run dag_add_ax_basics)
+        do_basics       bool            Whether to add basic features to the plot (i.e., run dpu_add_ax_basics)
         xerr            bool            Whether to include x error bars
         do_bars         bool            Whether to include error bars
         do_shade        bool            Do shading instead?
@@ -710,11 +710,11 @@ def dag_plot_bin_line(ax, X,Y, bin_using, **kwargs):
             )
     ax.legend()
     if do_basics:    
-        dag_add_ax_basics(ax, **kwargs)
+        dpu_add_ax_basics(ax, **kwargs)
 
 
-def dag_arrow_plot(ax, old_x, old_y, new_x, new_y, **kwargs):
-    '''dag_arrow_plot
+def dpu_arrow_plot(ax, old_x, old_y, new_x, new_y, **kwargs):
+    '''dpu_arrow_plot
     Description:
         Plot arrows from old to new points. Includes the option to bin the points
         Also various fun things such as color coding the arrows by angle, color coding the points, etc...
@@ -790,8 +790,8 @@ def dag_arrow_plot(ax, old_x, old_y, new_x, new_y, **kwargs):
     if do_binning:
         # print("DOING BINNING") 
         min_vx_per_bin = kwargs.get('min_vx_per_bin', False)
-        old_ecc, old_pol = dag_coord_convert(old_x, old_y,old2new="cart2pol")
-        old_bin_x, old_bin_y, new_bin_x, new_bin_y = dag_return_ecc_pol_bin(
+        old_ecc, old_pol = dpu_coord_convert(old_x, old_y,old2new="cart2pol")
+        old_bin_x, old_bin_y, new_bin_x, new_bin_y = dpu_return_ecc_pol_bin(
             params2bin=[old_x, old_y, new_x, new_y], 
             ecc4bin=old_ecc, 
             pol4bin=old_pol, 
@@ -814,8 +814,8 @@ def dag_arrow_plot(ax, old_x, old_y, new_x, new_y, **kwargs):
     if do_arrows: # Arrows all the same color
         if arrow_col=='angle':
             # Get the angles for the arrows
-            _, angle = dag_coord_convert(dx, dy, 'cart2pol')
-            q_cmap = dag_get_cmap(arrow_cmap)#mpl.cm.__dict__['hsv']
+            _, angle = dpu_coord_convert(dx, dy, 'cart2pol')
+            q_cmap = dpu_get_cmap(arrow_cmap)#mpl.cm.__dict__['hsv']
             q_norm = mpl.colors.Normalize()
             q_norm.vmin = -3.14
             q_norm.vmax = 3.14
@@ -848,12 +848,12 @@ def dag_arrow_plot(ax, old_x, old_y, new_x, new_y, **kwargs):
     else:
         arrows = None
     if add_grid_lines:
-        dag_add_ecc_pol_lines(ax, **kwargs)        
-    dag_add_ax_basics(ax, **kwargs)    
+        dpu_add_ecc_pol_lines(ax, **kwargs)        
+    dpu_add_ax_basics(ax, **kwargs)    
     return arrows
 
-def dag_arrow_coord_getter(old_x, old_y, new_x, new_y, **kwargs):
-    '''dag_arrow_plot
+def dpu_arrow_coord_getter(old_x, old_y, new_x, new_y, **kwargs):
+    '''dpu_arrow_plot
     Description:
         Plot arrows from old to new points. Includes the option to bin the points
         Also various fun things such as color coding the arrows by angle, color coding the points, etc...
@@ -877,8 +877,8 @@ def dag_arrow_coord_getter(old_x, old_y, new_x, new_y, **kwargs):
     # pol_bounds = kwargs.get("pol_bounds", default_pol_bounds)    
     if do_binning:
         # print("DOING BINNING") 
-        old_ecc, old_pol = dag_coord_convert(old_x, old_y,old2new="cart2pol")
-        old_bin_x, old_bin_y, new_bin_x, new_bin_y = dag_return_ecc_pol_bin(
+        old_ecc, old_pol = dpu_coord_convert(old_x, old_y,old2new="cart2pol")
+        old_bin_x, old_bin_y, new_bin_x, new_bin_y = dpu_return_ecc_pol_bin(
             params2bin=[old_x, old_y, new_x, new_y], 
             ecc4bin=old_ecc, 
             pol4bin=old_pol, 
@@ -893,7 +893,7 @@ def dag_arrow_coord_getter(old_x, old_y, new_x, new_y, **kwargs):
     dx = new_bin_x - old_bin_x
     dy = new_bin_y - old_bin_y    
     return old_bin_x, old_bin_y, new_bin_x, new_bin_y, dx,dy
-# def dag_2d_density(X,Y, ax=None, **kwargs):
+# def dpu_2d_density(X,Y, ax=None, **kwargs):
 #     '''
 #     https://towardsdatascience.com/simple-example-of-2d-density-plots-in-python-83b83b934f67
 #     '''
@@ -906,7 +906,7 @@ def dag_arrow_coord_getter(old_x, old_y, new_x, new_y, **kwargs):
 
 
 
-def dag_scatter(X,Y,ax=None, **kwargs):
+def dpu_scatter(X,Y,ax=None, **kwargs):
     if ax is None:
         ax = plt.gca()
     do_scatter = kwargs.get('do_scatter', True)
@@ -939,9 +939,9 @@ def dag_scatter(X,Y,ax=None, **kwargs):
             cb.set_alpha(1)
             cb.draw_all()
     if do_line:
-        dag_plot_bin_line(ax=ax, X=X,Y=Y, bin_using=X, **kwargs)
+        dpu_plot_bin_line(ax=ax, X=X,Y=Y, bin_using=X, **kwargs)
     if do_corr:
-        corr_xy = dag_get_corr(X,Y)
+        corr_xy = dpu_get_corr(X,Y)
         corr_str = f'corr={corr_xy:.3f}'
     else:
         corr_str = ''
@@ -975,15 +975,15 @@ def dag_scatter(X,Y,ax=None, **kwargs):
         ax.set_xlim(min_v,max_v)
         ax.set_ylim(min_v,max_v)
         ax.set_box_aspect(1)
-    dag_add_ax_basics(ax=ax, **kwargs)
+    dpu_add_ax_basics(ax=ax, **kwargs)
 
 
 
-def dag_multi_scatter(data_in, **kwargs):
+def dpu_multi_scatter(data_in, **kwargs):
     '''
     Many parameters to correlate do x,y... etc    
     '''
-    do_dag_scatter = kwargs.get('dag_scatter', False)
+    do_dpu_scatter = kwargs.get('dpu_scatter', False)
     skip_hist = kwargs.get('skip_hist', False)
     truths = kwargs.get('truths', None)
     # Which labels for x and y?
@@ -1050,7 +1050,7 @@ def dag_multi_scatter(data_in, **kwargs):
                         # Add vline
                         ax.vlines(truths[x_param], ymin=ax.get_ylim()[0], ymax=ax.get_ylim()[1])
                 else:
-                    if not do_dag_scatter:
+                    if not do_dpu_scatter:
                         ax.set_ylabel(y_param)
                         ax.scatter(
                             data_dict[x_param],
@@ -1059,7 +1059,7 @@ def dag_multi_scatter(data_in, **kwargs):
                         ax.set_title(
                             f'corr={np.corrcoef(data_dict[x_param],data_dict[y_param])[0,1]:.3f}')
                     else:
-                        dag_scatter(
+                        dpu_scatter(
                             X= data_dict[x_param],
                             Y= data_dict[y_param],
                             ax=ax,
@@ -1158,7 +1158,7 @@ def edit_pair_plot(axes, **kwargs):
 
 
 # VIOLIN STUFF
-def dag_full_violin(pd2plot):
+def dpu_full_violin(pd2plot):
     sns.set_style("whitegrid")
     sns.violinplot(                                                                        
         data=pd2plot, width=1, linewidth=0, 
@@ -1171,7 +1171,7 @@ def dag_full_violin(pd2plot):
         data=pd2plot, estimator=np.median,
         )   
 
-def dag_dict_key_to_pd_label(dict_in):
+def dpu_dict_key_to_pd_label(dict_in):
     new_pd = {}
     new_pd['key'] = []
     new_pd['val'] = []
@@ -1182,7 +1182,7 @@ def dag_dict_key_to_pd_label(dict_in):
     return new_pd
 
 
-def dag_half_violin(pd2plot, match_id, split_id, **kwargs):
+def dpu_half_violin(pd2plot, match_id, split_id, **kwargs):
     new_pd = {}
     new_pd['match_id'] = []
     new_pd['split_id'] = []
@@ -1221,7 +1221,7 @@ def dag_half_violin(pd2plot, match_id, split_id, **kwargs):
         )    
 
 
-def dag_add_axis_to_xtick(fig, ax, dx_axs=1, **kwargs):
+def dpu_add_axis_to_xtick(fig, ax, dx_axs=1, **kwargs):
     '''add_axis_to_xtick
     Inputs:
         fig, ax: matplotlib figure and axis
@@ -1277,7 +1277,7 @@ def dag_add_axis_to_xtick(fig, ax, dx_axs=1, **kwargs):
         xtick_out.append(xticks[i_tick])
     return xtick_out, xticks_axs
 
-def dag_add_dm_to_x(dm, xtick_out, xtick_axs, xtick_axs_idx=None, **kwargs):
+def dpu_add_dm_to_x(dm, xtick_out, xtick_axs, xtick_axs_idx=None, **kwargs):
     '''add_dm_to_x
     Description:
         Adds a design matrix to a set of axes
@@ -1322,12 +1322,12 @@ def dag_add_dm_to_x(dm, xtick_out, xtick_axs, xtick_axs_idx=None, **kwargs):
         
         # xtick_axs[i].patch.set_alpha(0.5)
 
-def dag_add_dm_to_ts(fig, ax, dm, dx_axs=1, **kwargs):
+def dpu_add_dm_to_ts(fig, ax, dm, dx_axs=1, **kwargs):
     '''Add dm to time series
     '''
     move_y = kwargs.pop('move_y', 0)
-    xtick_out, ax_out = dag_add_axis_to_xtick(fig, ax, dx_axs,move_y=move_y, **kwargs)
-    dag_add_dm_to_x(
+    xtick_out, ax_out = dpu_add_axis_to_xtick(fig, ax, dx_axs,move_y=move_y, **kwargs)
+    dpu_add_dm_to_x(
         dm=dm, 
         xtick_out=xtick_out, 
         xtick_axs=ax_out, 
@@ -1335,7 +1335,7 @@ def dag_add_dm_to_ts(fig, ax, dm, dx_axs=1, **kwargs):
         **kwargs
         )
 
-def dag_change_fig_item_col(fig_item, old_col, new_col, depth=0):
+def dpu_change_fig_item_col(fig_item, old_col, new_col, depth=0):
     '''
     Cycle recursively through all items in a figure and change the color of anything that matches old_col to new_col
     '''
@@ -1347,7 +1347,7 @@ def dag_change_fig_item_col(fig_item, old_col, new_col, depth=0):
 
     if isinstance(fig_item, list):
         for item in fig_item:
-            dag_change_fig_item_col(item, old_col, new_col, depth=depth+1)
+            dpu_change_fig_item_col(item, old_col, new_col, depth=depth+1)
     else:
         if hasattr(fig_item, 'get_color'):
             # print(depth)
@@ -1356,11 +1356,11 @@ def dag_change_fig_item_col(fig_item, old_col, new_col, depth=0):
                 print(fig_item.get_color())
                 fig_item.set_color(new_col)
         if hasattr(fig_item, 'get_children'):
-            dag_change_fig_item_col(fig_item.get_children(), old_col, new_col, depth=depth+1)
+            dpu_change_fig_item_col(fig_item.get_children(), old_col, new_col, depth=depth+1)
 
 
 
-def dag_get_row_col(plot_index, n_cols=None, n_rows=None, dir='col', start_idx=0):
+def dpu_get_row_col(plot_index, n_cols=None, n_rows=None, dir='col', start_idx=0):
     '''
     Get row and col for a subplot index
     If dir is 'row', then row is the first index to change
@@ -1376,7 +1376,7 @@ def dag_get_row_col(plot_index, n_cols=None, n_rows=None, dir='col', start_idx=0
 
 
 
-def dag_set_all_fig_item_attributes(fig_item, set_attribute, new_value, depth=0):
+def dpu_set_all_fig_item_attributes(fig_item, set_attribute, new_value, depth=0):
     '''
     Cycle recursively through all items in a figure and change the color of anything that matches old_col to new_col
     '''
@@ -1388,15 +1388,15 @@ def dag_set_all_fig_item_attributes(fig_item, set_attribute, new_value, depth=0)
 
     if isinstance(fig_item, list):
         for item in fig_item:
-            dag_set_all_fig_item_attributes(item, set_attribute, new_value, depth=depth+1)
+            dpu_set_all_fig_item_attributes(item, set_attribute, new_value, depth=depth+1)
     else:
         if hasattr(fig_item, set_attribute):
             fig_item.__getattribute__(set_attribute)(new_value)
         if hasattr(fig_item, 'get_children'):
-            dag_set_all_fig_item_attributes(fig_item.get_children(), set_attribute, new_value, depth=depth+1)
+            dpu_set_all_fig_item_attributes(fig_item.get_children(), set_attribute, new_value, depth=depth+1)
 
 
-def dag_add_square_axis(main_obj, width_ratio, position_ratio):
+def dpu_add_square_axis(main_obj, width_ratio, position_ratio):
     """
     Add a square axis inside the given axis.
 
@@ -1434,7 +1434,7 @@ def dag_add_square_axis(main_obj, width_ratio, position_ratio):
         ax.remove()
     return square_ax
     
-def dag_add_compass(main_ax, width_ratio=0.5, position_ratio=[1,1], **kwargs):    
+def dpu_add_compass(main_ax, width_ratio=0.5, position_ratio=[1,1], **kwargs):    
     # Set everything up
     pol_type = kwargs.get("pol_type", "radians")
     n_pol    = kwargs.get("n_pol", 9)     
@@ -1453,7 +1453,7 @@ def dag_add_compass(main_ax, width_ratio=0.5, position_ratio=[1,1], **kwargs):
     n_segments = 45
     ecc = np.ones(n_segments)-0.2
     pol = np.linspace(-np.pi, np.pi, n_segments)
-    xs,ys = dag_coord_convert(ecc,pol, 'pol2cart')
+    xs,ys = dpu_coord_convert(ecc,pol, 'pol2cart')
     # Add to main axis...
     if not wheel_only:
         y_lim = main_ax.get_ylim()
@@ -1466,7 +1466,7 @@ def dag_add_compass(main_ax, width_ratio=0.5, position_ratio=[1,1], **kwargs):
         return
 
     # Add the axis    
-    ax = dag_add_square_axis(main_ax, width_ratio, position_ratio)
+    ax = dpu_add_square_axis(main_ax, width_ratio, position_ratio)
     ax.set_ylim(-1,1)
     ax.set_xlim(-1,1)
     # **** ADD THE LINES ****
@@ -1504,7 +1504,7 @@ def dag_add_compass(main_ax, width_ratio=0.5, position_ratio=[1,1], **kwargs):
     # Add pie chart colormap
     # Generate data for the pie chart
     values = np.ones(n_segments)
-    cwheel_colors = dag_get_col_vals(pol, vmin=-np.pi, vmax=np.pi, cmap=cmap)
+    cwheel_colors = dpu_get_col_vals(pol, vmin=-np.pi, vmax=np.pi, cmap=cmap)
     # Plot the pie chart
     ax.pie(
         values, 
@@ -1518,7 +1518,7 @@ def dag_add_compass(main_ax, width_ratio=0.5, position_ratio=[1,1], **kwargs):
     # Also scatter dots, for sanity check on pie...
 
 
-def dag_box_around_ax_list(fig, ax_list, **kwargs):
+def dpu_box_around_ax_list(fig, ax_list, **kwargs):
     '''
     Add a rectangle around a set of axes    
 
@@ -1548,7 +1548,7 @@ def dag_box_around_ax_list(fig, ax_list, **kwargs):
     fig.add_artist(rect)
 
 
-def dag_shaded_line(line_data, xdata, **kwargs):
+def dpu_shaded_line(line_data, xdata, **kwargs):
     """    
 
     Parameters:
@@ -1623,7 +1623,7 @@ def dag_shaded_line(line_data, xdata, **kwargs):
 
 
 
-def dag_add_all_subfig_labels(axs, **kwargs):
+def dpu_add_all_subfig_labels(axs, **kwargs):
     i_row, i_col = axs.shape    
     num_labels = (i_row+1) * (i_col+1) 
     labels = []
@@ -1643,13 +1643,13 @@ def dag_add_all_subfig_labels(axs, **kwargs):
     for iR in range(i_row):
         for iC in range(i_col):
             label = labels[iR * i_col + iC]
-            dag_add_subfig_labels(
+            dpu_add_subfig_labels(
                 ax=axs[iR,iC],
                 label=label,
                 **kwargs
             )
 
-def dag_add_subfig_labels(ax, label, **kwargs):
+def dpu_add_subfig_labels(ax, label, **kwargs):
     x=kwargs.pop('x', -0.15)
     y=kwargs.pop('y',  1.1)
     kwargs['fontsize'] = kwargs.get('fontsize', 12)
@@ -1662,7 +1662,7 @@ def dag_add_subfig_labels(ax, label, **kwargs):
         **kwargs
     )
 
-def dag_sub_categories_xvalues_SIMPLE(nL1, nL2, nL3=1, **kwargs):
+def dpu_sub_categories_xvalues_SIMPLE(nL1, nL2, nL3=1, **kwargs):
     '''
     Parameters:
         nL1 (int): Total number of level 1.
@@ -1704,7 +1704,7 @@ def dag_sub_categories_xvalues_SIMPLE(nL1, nL2, nL3=1, **kwargs):
     
 
 
-def dag_sub_categories_xvalues(i_sub, n_category, n_sub, **kwargs):
+def dpu_sub_categories_xvalues(i_sub, n_category, n_sub, **kwargs):
     '''
     Returns the x coordinates for subcategories within a category.
     
@@ -1763,7 +1763,7 @@ def dag_sub_categories_xvalues(i_sub, n_category, n_sub, **kwargs):
     return x_values    
 
 
-def dag_draw_significance_bar(ax, text, i_sub1, i_sub2, y_value=None, **kwargs):
+def dpu_draw_significance_bar(ax, text, i_sub1, i_sub2, y_value=None, **kwargs):
     '''
     Draws a significance bar connecting two subgroups within different categories on the given axis.
 
@@ -1796,9 +1796,9 @@ def dag_draw_significance_bar(ax, text, i_sub1, i_sub2, y_value=None, **kwargs):
     extend_by = kwargs.get('extend_by', 0) 
     lw = kwargs.get('lw', 1)
     # Get x-coordinates for the two subgroups
-    x_values1 = dag_sub_categories_xvalues(**i_sub1, **kwargs)
+    x_values1 = dpu_sub_categories_xvalues(**i_sub1, **kwargs)
     x1 = x_values1[i_sub1['i_category']]
-    x_values2 = dag_sub_categories_xvalues(**i_sub2, **kwargs)
+    x_values2 = dpu_sub_categories_xvalues(**i_sub2, **kwargs)
     x2 = x_values2[i_sub2['i_category']]
     xmid = (x1+x2)/2     
     bar_width = np.abs(x1 - x2)+extend_by
@@ -1822,7 +1822,7 @@ def dag_draw_significance_bar(ax, text, i_sub1, i_sub2, y_value=None, **kwargs):
     ax.text(xmid, y_value, text, color=text_color, size=text_size, ha='center', va='bottom')
 
 
-def dag_group_and_individual_3dict(ax, mdict, **kwargs):
+def dpu_group_and_individual_3dict(ax, mdict, **kwargs):
     y_upper = kwargs.pop('y_upper', {k:None for k in mdict.keys()})
     y_lower = kwargs.pop('y_lower', {k:None for k in mdict.keys()})
     l2_kwargs = kwargs.pop('l2_kwargs', {})
@@ -1836,7 +1836,7 @@ def dag_group_and_individual_3dict(ax, mdict, **kwargs):
     
     for i,k in enumerate(mdict.keys()):
             
-        this_tick_out = dag_group_and_individual_2dict(
+        this_tick_out = dpu_group_and_individual_2dict(
                 ax=ax,
                 mdict=mdict[k],
                 y_upper=y_upper[k],
@@ -1876,7 +1876,7 @@ def dag_group_and_individual_3dict(ax, mdict, **kwargs):
 
 
 
-def dag_group_and_individual_2dict(ax, mdict, **kwargs):
+def dpu_group_and_individual_2dict(ax, mdict, **kwargs):
     '''
     Plot bars for overall mean/median
     Points for individuals s + error 
@@ -1922,13 +1922,13 @@ def dag_group_and_individual_2dict(ax, mdict, **kwargs):
 
     if keys_split is not None:
         for k in keys_split:
-            dag_group_and_individual_2dict(
+            dpu_group_and_individual_2dict(
                 ax=ax,
                 mdict=mdict,
                 keys_to_plot=k,
                 **kwargs
             )
-        dag_group_and_i_xticks(
+        dpu_group_and_i_xticks(
             ax=ax, 
             mdict=mdict, 
             s_keys=s_keys,
@@ -1985,7 +1985,7 @@ def dag_group_and_individual_2dict(ax, mdict, **kwargs):
             **bar_kwargs,        
         )
 
-    ticks_out = dag_group_and_i_xticks(
+    ticks_out = dpu_group_and_i_xticks(
             ax=ax, 
             mdict=mdict, 
             s_keys=s_keys,
@@ -2000,7 +2000,7 @@ def dag_group_and_individual_2dict(ax, mdict, **kwargs):
     return ax
 
 
-def dag_group_and_i_xticks(ax, mdict, **kwargs):
+def dpu_group_and_i_xticks(ax, mdict, **kwargs):
     '''
     Set the xticks for group and individual plots
     '''
@@ -2028,7 +2028,7 @@ def dag_group_and_i_xticks(ax, mdict, **kwargs):
     return dict(x_standard=x_standard, x_pos=x_pos, x_keys=x_keys, xlim0=xlim0, xlim1=xlim1)
 
 
-def dag_merid_helper(main_ax,wedge_angle, colors, **kwargs):
+def dpu_merid_helper(main_ax,wedge_angle, colors, **kwargs):
     """
     Categorize points based on their position relative to specified meridians.
 
@@ -2041,7 +2041,7 @@ def dag_merid_helper(main_ax,wedge_angle, colors, **kwargs):
     width_ratio = kwargs.get("width_ratio", 0.5)
     position_ratio = kwargs.get("position_ratio", [1,1])
     # Add the axis    
-    ax = dag_add_square_axis(main_ax, width_ratio, position_ratio)
+    ax = dpu_add_square_axis(main_ax, width_ratio, position_ratio)
     ax.set_ylim(-1,1)
     ax.set_xlim(-1,1)
     # **** ADD THE LINES ****

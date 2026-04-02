@@ -11,17 +11,17 @@ from scipy.ndimage import zoom
 
 opj = os.path.join
 
-def dag_random_string(length):
+def dpu_random_string(length):
     # choose from all lowercase letter
     letters = string.ascii_lowercase
     result_str = ''.join(random.choice(letters) for i in range(length))    
     return result_str
 
-def dag_str2file(filename, txt):
+def dpu_str2file(filename, txt):
     file2write = open(filename, 'w')
     file2write.write(txt)
     file2write.close()
-def dag_arg_checker(arg2check, idx=None):
+def dpu_arg_checker(arg2check, idx=None):
     '''arg2check is a string, check if it's a number, return the number if so, otherwise return the string
     Should be able to deal with negative numbers too
     '''
@@ -44,7 +44,7 @@ def dag_arg_checker(arg2check, idx=None):
     # [1] Check if it is a list of arguments
     if ',' in arg2check:
         arg2check_list = arg2check.split(',')
-        arg_out = [dag_arg_checker(i) for i in arg2check_list]
+        arg_out = [dpu_arg_checker(i) for i in arg2check_list]
         return arg_out
     # [2] Check for common strings
     if arg2check.lower() == 'true':
@@ -70,7 +70,7 @@ def dag_arg_checker(arg2check, idx=None):
 
     return arg_out
 
-def dag_hyphen_parse(prefix: str, value: str) -> str:
+def dpu_hyphen_parse(prefix: str, value: str) -> str:
     """Ensure a BIDS-style prefixed string has the form `prefix-value`.
 
     Handles cases where the prefix may or may not already be present,
@@ -92,13 +92,13 @@ def dag_hyphen_parse(prefix: str, value: str) -> str:
 
     Examples
     --------
-    >>> dag_hyphen_parse("task", "A")
+    >>> dpu_hyphen_parse("task", "A")
     'task-A'
-    >>> dag_hyphen_parse("task", "task-A")
+    >>> dpu_hyphen_parse("task", "task-A")
     'task-A'
-    >>> dag_hyphen_parse("sub", "01")
+    >>> dpu_hyphen_parse("sub", "01")
     'sub-01'
-    >>> dag_hyphen_parse("sub", "sub-01")
+    >>> dpu_hyphen_parse("sub", "sub-01")
     'sub-01'
     """
     expected_prefix = f"{prefix}-"
@@ -114,7 +114,7 @@ def dag_hyphen_parse(prefix: str, value: str) -> str:
 
     return f"{expected_prefix}{bare}"
 
-def dag_find_file_in_folder(filt, path, return_msg='error', exclude=None, recursive=False, file_limit=9999, inclusive_or=False):
+def dpu_find_file_in_folder(filt, path, return_msg='error', exclude=None, recursive=False, file_limit=9999, inclusive_or=False):
     """get_file_from_substring
     Setup to be compatible with JH linescanning toolbox function (linescanning.utils.get_file_from_substring)
     
@@ -194,7 +194,7 @@ def dag_find_file_in_folder(filt, path, return_msg='error', exclude=None, recurs
                 file_path = os.path.join(root, file_name)
 
                 # Check the inclusion & exclusion criteria
-                file_match = dag_file_name_check(file_name, filt_incl, filt_excl, inclusive_or)
+                file_match = dpu_file_name_check(file_name, filt_incl, filt_excl, inclusive_or)
                 if file_match:
                     matching_files.append(file_path)
 
@@ -221,7 +221,7 @@ def dag_find_file_in_folder(filt, path, return_msg='error', exclude=None, recurs
     return match_list
 
 
-def dag_file_name_check(file_name, filt_incl, filt_excl, inclusive=False):
+def dpu_file_name_check(file_name, filt_incl, filt_excl, inclusive=False):
     file_match = False
     if not inclusive: # (AND search)
         # Check if the file name contains all strings in filt_incl
@@ -240,7 +240,7 @@ def dag_file_name_check(file_name, filt_incl, filt_excl, inclusive=False):
 rdict = lambda: defaultdict(rdict)
 
 
-def dag_merge_dicts(a: dict, b: dict, max_depth=3, path=[]):
+def dpu_merge_dicts(a: dict, b: dict, max_depth=3, path=[]):
     '''
     Merge two dictionaries recursively
     Adapted from
@@ -252,7 +252,7 @@ def dag_merge_dicts(a: dict, b: dict, max_depth=3, path=[]):
             if isinstance(merged_dict[key], dict) and isinstance(b[key], dict):
                 if len(path) < max_depth:
                     # Recursively merge dictionaries
-                    merged_dict[key] = dag_merge_dicts(merged_dict[key], b[key], max_depth, path + [str(key)])
+                    merged_dict[key] = dpu_merge_dicts(merged_dict[key], b[key], max_depth, path + [str(key)])
                 else:
                     raise Exception('Max depth reached at ' + '.'.join(path + [str(key)]))
             elif merged_dict[key] != b[key]:
@@ -261,7 +261,7 @@ def dag_merge_dicts(a: dict, b: dict, max_depth=3, path=[]):
             merged_dict[key] = b[key]  # If the key is not in 'merged_dict', add it
     return merged_dict    
 
-def dag_get_cores_used(**kwargs):
+def dpu_get_cores_used(**kwargs):
     command = kwargs.get('command', None)
     if command is None:
         user_name = os.environ['USER']

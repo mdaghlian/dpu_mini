@@ -11,8 +11,8 @@ opj = os.path.join
 
 import numpy as np
 
-from dpu_mini.fs_tools import dag_make_overlay_str
-from dpu_mini.utils import dag_arg_checker, dag_hyphen_parse
+from dpu_mini.fs_tools import dpu_make_overlay_str
+from dpu_mini.utils import dpu_arg_checker, dpu_hyphen_parse
 
 
 def main(argv):
@@ -25,7 +25,7 @@ def main(argv):
         --output_dir          Where to save the overlay (default is current directory)
         
         --sub               subject number. If given will use the freesurfer directory for that subject
-        ... See dag_make_overlay_str for more options ...
+        ... See dpu_make_overlay_str for more options ...
         # 
         -h          help
     
@@ -42,7 +42,7 @@ def main(argv):
     for i,arg in enumerate(argv):
         if '--sub' in arg:
             print(f'Using freesurfer directory for {arg}')
-            output_dir = opj(os.environ['SUBJECTS_DIR'], dag_hyphen_parse('sub', argv[i+1]), 'surf', 'custom')
+            output_dir = opj(os.environ['SUBJECTS_DIR'], dpu_hyphen_parse('sub', argv[i+1]), 'surf', 'custom')
             
         elif '--overlay_name' in arg:
             overlay_name = argv[i+1]
@@ -60,7 +60,7 @@ def main(argv):
             # If argv[i] is an argument, then argv[i+1] is its value
             this_kwarg_value = argv[i+1]
             # Check if the value is a list
-            this_kwarg_value = dag_arg_checker(this_kwarg_value)
+            this_kwarg_value = dpu_arg_checker(this_kwarg_value)
             # Add to kwargs
             this_kwarg = arg.replace('--','')
             kwargs[this_kwarg] = this_kwarg_value
@@ -70,7 +70,7 @@ def main(argv):
     if overlay_name is None:
         overlay_name = kwargs['cmap']
         
-    _, overlay_str = dag_make_overlay_str(**kwargs)
+    _, overlay_str = dpu_make_overlay_str(**kwargs)
     print(overlay_str)
     overlay_path = opj(output_dir, overlay_name)
     print(f'Saving overlay to {overlay_path}')

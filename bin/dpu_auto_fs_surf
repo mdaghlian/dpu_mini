@@ -11,8 +11,8 @@ import numpy as np
 import re
 import scipy.io
 
-from dpu_mini.utils import dag_hyphen_parse, dag_arg_checker
-from dpu_mini.auto_fs_surf import dag_auto_surf_function
+from dpu_mini.utils import dpu_hyphen_parse, dpu_arg_checker
+from dpu_mini.auto_fs_surf import dpu_auto_surf_function
 
 def main(argv):
     '''
@@ -38,7 +38,7 @@ def main(argv):
         if arg in ('--param_path', '--params_path', '--path', '--p_path'):
             p_path = argv[i+1]
         elif '--sub' in arg:
-            sub = dag_hyphen_parse('sub', argv[i+1])
+            sub = dpu_hyphen_parse('sub', argv[i+1])
         elif '--fs_dir' in arg:
             fs_dir = argv[i+1]  
         elif '--output_dir' in arg:
@@ -53,10 +53,10 @@ def main(argv):
 
         elif '--' in arg:
             this_kwarg = arg.replace('--', '')
-            this_kwarg_value = dag_arg_checker(argv, i+1)
+            this_kwarg_value = dpu_arg_checker(argv, i+1)
             extra_kwargs[this_kwarg] = this_kwarg_value
             print(f'Unknown arg: {arg}')
-    dag_auto_surf_function(
+    dpu_auto_surf_function(
         p_path=p_path,
         sub=sub,
         fs_dir=fs_dir,

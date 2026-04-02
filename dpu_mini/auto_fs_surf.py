@@ -11,7 +11,7 @@ from dpu_mini.mesh_format import *
 from dpu_mini.mesh_maker import GenMeshMaker
 from dpu_mini.fs_tools import *
 import copy as copy
-def dag_auto_surf_function(**kwargs):
+def dpu_auto_surf_function(**kwargs):
     '''
     ---------------------------
     Auto open a subject surface
@@ -37,14 +37,14 @@ def dag_auto_surf_function(**kwargs):
             tkwargs['open'] = False
             tkwargs['file_name'] = f'f{i}'
             surf_list.extend(
-                dag_auto_surf_function(p_path=p, **tkwargs)
+                dpu_auto_surf_function(p_path=p, **tkwargs)
             )
         surf_list.sort()
 
     sub = kwargs.pop('sub', None)    
     fs_dir = kwargs.pop('fs_dir', os.environ['SUBJECTS_DIR'])    
     roi_mask = kwargs.pop('roi_mask', 'all')    
-    roi_mask = dag_load_roi(sub, roi=roi_mask, fs_dir=fs_dir, )
+    roi_mask = dpu_load_roi(sub, roi=roi_mask, fs_dir=fs_dir, )
     if not os.path.exists(fs_dir):
         print('Could not find SUBJECTS_DIR')
         print(fs_dir)

@@ -194,10 +194,10 @@ class GenMeshMaker(FSMaker):
             elif data.shape[1]==4:
                 return data
         try: 
-            data_cmap = dag_get_cmap(cmap)  
+            data_cmap = dpu_get_cmap(cmap)  
         except:
-            data_cmap = dag_cmap_from_str(cmap)
-        # data_cmap = dag_get_cmap(cmap)
+            data_cmap = dpu_cmap_from_str(cmap)
+        # data_cmap = dpu_get_cmap(cmap)
         data_norm = mpl.colors.Normalize()
         data_norm.vmin = vmin
         data_norm.vmax = vmax
@@ -228,9 +228,9 @@ class GenMeshMaker(FSMaker):
         '''Return dict with the vx and faces of mesh specified
         '''
         try:
-            this_mesh_info = dag_read_fs_mesh(opj(self.sub_surf_dir, f'{hemi}.{mesh}'))
+            this_mesh_info = dpu_read_fs_mesh(opj(self.sub_surf_dir, f'{hemi}.{mesh}'))
         except:
-            this_mesh_info = dag_read_fs_mesh(opj(self.sub_surf_dir, f'{hemi}.{mesh}.T1'))
+            this_mesh_info = dpu_read_fs_mesh(opj(self.sub_surf_dir, f'{hemi}.{mesh}.T1'))
 
         # Put it into x,y,z, i,j,k format. Plus add offset to x
         mesh_info = {}                                    
@@ -298,20 +298,20 @@ class GenMeshMaker(FSMaker):
         if curv_name in ['curv', 'thickness']:
             curv_file = opj(self.sub_surf_dir,f'{hemi}.{curv_name}')
         elif custom_only: # Only look in custom folder
-            curv_file = dag_find_file_in_folder(
+            curv_file = dpu_find_file_in_folder(
                 filt = [curv_name, *include, hemi],
                 path=self.custom_surf_dir,
                 **kwargs
             )
         else:
-            curv_file = dag_find_file_in_folder(
+            curv_file = dpu_find_file_in_folder(
                 filt = [curv_name, *include, hemi],
                 path=self.sub_surf_dir,
                 **kwargs
             )
         if isinstance(curv_file, list):
             print(curv_file)
-        curv_vals = dag_read_fs_curv_file(curv_file)
+        curv_vals = dpu_read_fs_curv_file(curv_file)
         return curv_vals
     
     def _return_fs_curv_vals_both_hemis(self, curv_name, return_type='dict', **kwargs):
@@ -349,7 +349,7 @@ class GenMeshMaker(FSMaker):
     # *****************************************************************
     #region ROI FUNCTIONS
     def _return_roi_bool(self, roi_name, hemi='', **kwargs):
-        roi_bool = dag_load_roi(self.sub, roi_name, fs_dir=self.fs_dir, split_LR=True)[hemi]
+        roi_bool = dpu_load_roi(self.sub, roi_name, fs_dir=self.fs_dir, split_LR=True)[hemi]
         return roi_bool
     def _return_roi_bool_both_hemis(self, roi_name, return_type='dict', **kwargs):
         roi_bool_D = {}
@@ -368,7 +368,7 @@ class GenMeshMaker(FSMaker):
     # -> borders.
     def _return_roi_bool_border(self, roi_name, hemi, **kwargs):
         roi_bool = self._return_roi_bool(roi_name, hemi, **kwargs)
-        roi_bool_border = dag_find_border_vx(roi_bool, self.mesh_info['inflated'][hemi], return_type='bool')
+        roi_bool_border = dpu_find_border_vx(roi_bool, self.mesh_info['inflated'][hemi], return_type='bool')
         return roi_bool_border    
 
     def _return_roi_bool_border_both_hemis(self, roi_name, return_type='dict', **kwargs):
@@ -398,7 +398,7 @@ class GenMeshMaker(FSMaker):
         roi_obj = []
         roi_count = -1
         for i_roi,roi in enumerate(roi_list):                
-            roi_bool = dag_load_roi(self.sub, roi, fs_dir=self.fs_dir, split_LR=True, combine_matches=combine_matches, recursive_search=True)
+            roi_bool = dpu_load_roi(self.sub, roi, fs_dir=self.fs_dir, split_LR=True, combine_matches=combine_matches, recursive_search=True)
             if 'lh' not in roi_bool.keys():
                 # We found extra matches!!!
                 print(f'Found extra matches for {roi}')
@@ -411,7 +411,7 @@ class GenMeshMaker(FSMaker):
                 for ih,hemi in enumerate(hemi_list):
                     if roi_bool[roi_extra][hemi].sum()==0:
                         continue
-                    border_vx_list, border_coords_list = dag_find_border_vx_in_order(
+                    border_vx_list, border_coords_list = dpu_find_border_vx_in_order(
                         roi_bool=roi_bool[roi_extra][hemi], 
                         mesh_info=self.mesh_info[mesh_name][hemi], 
                         return_coords=True,
@@ -531,18 +531,18 @@ class GenMeshMaker(FSMaker):
                 print(centre_bool)
             # Cut a box around them?            
             if cut_box:
-                hemi_kwargs['vx_to_include'] = dag_cut_box(
+                hemi_kwargs['vx_to_include'] = dpu_cut_box(
                     mesh_info=self.mesh_info['inflated'][hemi],
                     vx_bool=centre_bool_hemi[hemi],
                 )
             else:
                 hemi_kwargs['vx_to_include'] = vx_to_include[hemi]
-            hemi_kwargs['vx_to_include'] = dag_mesh_morph(
+            hemi_kwargs['vx_to_include'] = dpu_mesh_morph(
                 mesh_info=self.mesh_info['inflated'][hemi], 
                 vx_bool=hemi_kwargs['vx_to_include'], 
                 morph=morph)
             hemi_kwargs['centre_bool'] = hemi_kwargs['vx_to_include'] #centre_bool_hemi[hemi]
-            pts,polys,_ = dag_flatten(
+            pts,polys,_ = dpu_flatten(
                 mesh_info=self.mesh_info[hemi_project][hemi], 
                 method=method,
                 **hemi_kwargs)        
@@ -615,7 +615,7 @@ class GenMeshMaker(FSMaker):
         ylim = [np.inf, -np.inf]
         for hemi in hemi_list: 
             if rot_angles is not None:
-                mpts[hemi] = dag_coord_rot(mpts[hemi], rot_angles)         
+                mpts[hemi] = dpu_coord_rot(mpts[hemi], rot_angles)         
             if np.isnan(mpts[hemi][0][0]):
                 continue
             triang = mpl.tri.Triangulation(
@@ -669,9 +669,9 @@ class GenMeshMaker(FSMaker):
         if colorbar:
             norm = mpl.colors.Normalize(vmin=cmap_dict['vmin'], vmax=cmap_dict['vmax'])
             try:
-                cmap = dag_get_cmap(cmap_dict['cmap'])
+                cmap = dpu_get_cmap(cmap_dict['cmap'])
             except:
-                cmap = dag_cmap_from_str(cmap_dict['cmap'])
+                cmap = dpu_cmap_from_str(cmap_dict['cmap'])
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
             sm.set_array([])
             fig.colorbar(sm, ax=ax, orientation='horizontal', label=surf_name)
@@ -726,7 +726,7 @@ class GenMeshMaker(FSMaker):
 
         for hemi in hemi_list:
             if rot_angles is not None:
-                mpts[hemi] = dag_coord_rot(mpts[hemi], rot_angles)
+                mpts[hemi] = dpu_coord_rot(mpts[hemi], rot_angles)
             if np.isnan(mpts[hemi][0][0]):
                 continue
 
@@ -784,7 +784,7 @@ class GenMeshMaker(FSMaker):
         # Add color bar
         if colorbar:
             norm = mpl.colors.Normalize(vmin=cmap_dict['vmin'], vmax=cmap_dict['vmax'])
-            cmap = dag_get_cmap(cmap_dict['cmap'])
+            cmap = dpu_get_cmap(cmap_dict['cmap'])
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
             sm.set_array([])
             fig.colorbar(sm, ax=ax, orientation='horizontal', label=surf_name)
@@ -811,7 +811,7 @@ class GenMeshMaker(FSMaker):
             else:
                 ValueError 
 
-        sm = dag_submesh_from_mesh(
+        sm = dpu_submesh_from_mesh(
             mesh_info=self.mesh_info[surf][hemi], 
             submesh_bool=mask, **kwargs)
         return sm
@@ -860,7 +860,7 @@ class GenMeshMaker(FSMaker):
         # Then save them as .ply files, with the display rgb data for each voxel
         ply_file_2open = []
         for hemi in ['lh', 'rh']:
-            ply_str = dag_ply_write(
+            ply_str = dpu_ply_write(
                 mesh_info   = self.mesh_info[mesh_name][hemi], 
                 diplay_rgb  = display_rgb[hemi], 
                 hemi        = hemi, 

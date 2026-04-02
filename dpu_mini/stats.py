@@ -3,8 +3,8 @@ from scipy.stats import t
 from scipy.fftpack import dct, idct
 from scipy.spatial.transform import Rotation as R
 
-def dag_rescale_bw(data_in, **kwargs):
-    '''dag_rescale_bw    
+def dpu_rescale_bw(data_in, **kwargs):
+    '''dpu_rescale_bw    
     rescale data between 2 values
 
     data_in     data to rescale
@@ -29,8 +29,8 @@ def dag_rescale_bw(data_in, **kwargs):
         data_out /= np.nanmax(data_out)
     return data_out
 
-def dag_get_rsq(tc_target, tc_fit):
-    '''dag_get_rsq
+def dpu_get_rsq(tc_target, tc_fit):
+    '''dpu_get_rsq
     Calculate the rsq (R squared)
     Of a fit time course (tc_fit), on a target (tc_target)    
     '''
@@ -43,13 +43,13 @@ def dag_get_rsq(tc_target, tc_fit):
 
     return rsq
     
-def dag_get_corr(a, b):
-    '''dag_get_corr
+def dpu_get_corr(a, b):
+    '''dpu_get_corr
     '''
     corr = np.corrcoef(a,b)[0,1]
     return corr
 
-def dag_row_wise_corr(arr1, arr2):
+def dpu_row_wise_corr(arr1, arr2):
     """
     Calculates the row-wise correlation between two NumPy arrays of the same shape.
 
@@ -71,7 +71,7 @@ def dag_row_wise_corr(arr1, arr2):
     # Return the correlation coefficients
     return numerator / denominator
 
-def dag_detrending(ts, detrend_method='poly', detrend_param=0, normalize_method='psc', baseline_pt=None):
+def dpu_detrending(ts, detrend_method='poly', detrend_param=0, normalize_method='psc', baseline_pt=None):
     """
     Detrend a time series using either DCT-based or polynomial detrending, with optional normalization.
 
@@ -90,7 +90,7 @@ def dag_detrending(ts, detrend_method='poly', detrend_param=0, normalize_method=
         If 0 or False, no detrending is performed.
     normalize_method : str, optional
         Normalization method applied after detrending. Options are:
-            - 'psc': Percentage Signal Change (requires an external function `dag_psc`).
+            - 'psc': Percentage Signal Change (requires an external function `dpu_psc`).
             - 'zscore': Z-score normalization.
             - None: No normalization.
         Default is 'psc'.
@@ -159,8 +159,8 @@ def dag_detrending(ts, detrend_method='poly', detrend_param=0, normalize_method=
     
     # Apply normalization if requested
     if normalize_method == 'psc':
-        # Note: Assumes that a function `dag_psc` is defined elsewhere.
-        detrended_ts = dag_psc(detrended_ts, baseline_pt)
+        # Note: Assumes that a function `dpu_psc` is defined elsewhere.
+        detrended_ts = dpu_psc(detrended_ts, baseline_pt)
     elif normalize_method == 'zscore':
         detrended_ts = (detrended_ts - np.mean(detrended_ts, axis=1, keepdims=True)) / \
                         np.std(detrended_ts, axis=1, ddof=1, keepdims=True)
@@ -171,7 +171,7 @@ def dag_detrending(ts, detrend_method='poly', detrend_param=0, normalize_method=
     
     return detrended_ts
 
-def dag_psc(ts_in, baseline_pt=None):
+def dpu_psc(ts_in, baseline_pt=None):
     """
     Calculate Percentage Signal Change (PSC) for the input time series.
 
@@ -210,8 +210,8 @@ def dag_psc(ts_in, baseline_pt=None):
 
     return ts_out
 
-def dag_paired_ttest(x, y, **kwargs):
-    '''dag_paired_ttest
+def dpu_paired_ttest(x, y, **kwargs):
+    '''dpu_paired_ttest
     sim#ple paired t-test, with option to override to correct for voxel-to-surface upsampling
     
     ow_n                    Specify the 'n' by hand
@@ -222,7 +222,7 @@ def dag_paired_ttest(x, y, **kwargs):
     x= np.random.rand(100)
     y = x +  (np.random.rand(100) -.5 )     
     for side in ['greater', 'less', 'two-sided']:
-        print(dag_paired_ttest(x, y,side=side))
+        print(dpu_paired_ttest(x, y,side=side))
         print(stats.ttest_rel(x, y, alternative=side))
     '''
     ow_n = kwargs.get('ow_n', None)
@@ -244,7 +244,7 @@ def dag_paired_ttest(x, y, **kwargs):
     standard_error = std_diff / np.sqrt(n)
     t_statistic = mean_diff / standard_error
 
-    p_value = dag_t_to_p(t_statistic, df, side)
+    p_value = dpu_t_to_p(t_statistic, df, side)
 
     stats = {
         'n'             : n,
@@ -256,8 +256,8 @@ def dag_paired_ttest(x, y, **kwargs):
     return stats
 
 
-def dag_rapid_slope(x,y):
-    '''dag_rapid_slope
+def dpu_rapid_slope(x,y):
+    '''dpu_rapid_slope
     Calculate the slope as quickly as possible
     '''
     x_mean = x.mean()
@@ -269,8 +269,8 @@ def dag_rapid_slope(x,y):
     slope = numerator / denominator
     return slope
 
-def dag_rapid_slope_intercept(x,y):
-    '''dag_rapid_slope_intercept
+def dpu_rapid_slope_intercept(x,y):
+    '''dpu_rapid_slope_intercept
     Calculate the slope and intercept as quickly as possible
     '''
     x_mean = x.mean()
@@ -285,7 +285,7 @@ def dag_rapid_slope_intercept(x,y):
     
     return slope, intercept
 
-def dag_slope_test(x,y, **kwargs):
+def dpu_slope_test(x,y, **kwargs):
     '''ncsf_slope
     Calculate the slope, intercept, associated t-stat, and p-values
     
@@ -328,7 +328,7 @@ def dag_slope_test(x,y, **kwargs):
     # t-statistic
     t_statistic = slope / std_error_slope
 
-    p_value = dag_t_to_p(t_statistic, df, side)
+    p_value = dpu_t_to_p(t_statistic, df, side)
 
     stats = {
         'n' : n,
@@ -340,7 +340,7 @@ def dag_slope_test(x,y, **kwargs):
     }
     return stats
 
-def dag_t_to_p(t_statistic, df, side):
+def dpu_t_to_p(t_statistic, df, side):
     # Caclulate the p-value
     if side=='two-sided':
         p_value = 2 * (1 - t.cdf(np.abs(t_statistic), df))
@@ -352,7 +352,7 @@ def dag_t_to_p(t_statistic, df, side):
 
 
 
-def dag_coord_convert(a,b,old2new):
+def dpu_coord_convert(a,b,old2new):
     ''' 
     Convert cartesian to polar and vice versa
     >> a,b          x,y or eccentricity, polar
@@ -373,7 +373,7 @@ def dag_coord_convert(a,b,old2new):
         
     return new_a, new_b
 
-def dag_coord_rot(coords, angles):
+def dpu_coord_rot(coords, angles):
     '''
     Rotate coordinates
     '''        
@@ -381,7 +381,7 @@ def dag_coord_rot(coords, angles):
     transformed_coords = r.apply(coords)
     return transformed_coords
 
-def dag_coord_convert3d(a,b,c,old2new):
+def dpu_coord_convert3d(a,b,c,old2new):
     ''' 
     Convert cartesian to polar and vice versa
     >> a,b,c          x,y,z or eccentricity, polar, azimuth
@@ -406,12 +406,12 @@ def dag_coord_convert3d(a,b,c,old2new):
         
     return new_a, new_b, new_c
 
-def dag_pol_difference(pol, ref_pol):
+def dpu_pol_difference(pol, ref_pol):
     abs_diff = np.abs(ref_pol - pol)
     abs_diff = np.min(abs_diff, 2*np.pi-abs_diff)
     return abs_diff
 
-def dag_merid_idx(x, y, wedge_angle=15, angle_type='deg', **kwargs):
+def dpu_merid_idx(x, y, wedge_angle=15, angle_type='deg', **kwargs):
     """
     Categorize points based on their position relative to specified meridians.
 
@@ -460,7 +460,7 @@ def dag_merid_idx(x, y, wedge_angle=15, angle_type='deg', **kwargs):
 
 
 
-def dag_pol_to_clock(pol):
+def dpu_pol_to_clock(pol):
     # Convert angles to the range [0, 2*pi)
     # rotate by 90
     pol = pol + np.pi/2
@@ -471,7 +471,7 @@ def dag_pol_to_clock(pol):
     return clock_values
 
 
-def dag_weighted_mean(w,x, axis='all'):
+def dpu_weighted_mean(w,x, axis='all'):
     # w_mean = np.sum(w * x) / np.sum(w) # original form
     if axis=='all':
         w_mean = np.nansum(w * x) / np.nansum(w)
@@ -481,7 +481,7 @@ def dag_weighted_mean(w,x, axis='all'):
     return w_mean
 
 
-def dag_get_pos_change(old_x, old_y, new_x, new_y):
+def dpu_get_pos_change(old_x, old_y, new_x, new_y):
     dx = new_x - old_x
     dy = new_y - old_y
     dsize = np.sqrt(dx**2 + dy**2)
@@ -492,7 +492,7 @@ def dag_get_pos_change(old_x, old_y, new_x, new_y):
 import numpy as np
 
 
-def dag_fill_screen_params(params):
+def dpu_fill_screen_params(params):
     """
     Given a dict with some of the following keys:
       width_px, width_cm, width_deg,

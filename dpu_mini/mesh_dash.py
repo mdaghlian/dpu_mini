@@ -29,7 +29,7 @@ path_to_utils = os.path.abspath(os.path.dirname(__file__))
 
 import pickle
 
-def dag_mesh_pickle(mesh_dash, **kwargs):
+def dpu_mesh_pickle(mesh_dash, **kwargs):
     # Path to the pickle file
     file_name = kwargs.get('file_name', 'mesh_dash.pkl')
     if not file_name.endswith('.pkl'):
@@ -43,7 +43,7 @@ def dag_mesh_pickle(mesh_dash, **kwargs):
         pickle.dump(mesh_dash, f,) 
         #**kwargs)
 
-def dag_mesh_combine(mesh_dash_list, mesh_names=None, **kwargs):
+def dpu_mesh_combine(mesh_dash_list, mesh_names=None, **kwargs):
     '''
     Combine multiple mesh dash objects into one
     '''
@@ -138,7 +138,7 @@ class MeshDash(GenMeshMaker):
                 mesh_dict[hemi]['vertexcolor']=disp_rgb[hemi]
             if do_intensity:
                 mesh_dict[hemi]['intensity'] = data_4_dict[hemi]
-            mesh_dict[hemi] = dag_mesh_slice(mesh_dict[hemi], **kwargs)
+            mesh_dict[hemi] = dpu_mesh_slice(mesh_dict[hemi], **kwargs)
         if return_cmap_dict:
             return mesh_dict, cmap_dict
         else:
@@ -213,7 +213,7 @@ class MeshDash(GenMeshMaker):
             hemi_list = [hemi_list]
         mesh_name = kwargs.get('mesh_name', 'inflated')
         # marker_kwargs = kwargs.get()
-        roi_cols = dag_get_col_vals(
+        roi_cols = dpu_get_col_vals(
             np.arange(len(roi_list)),
             vmin = -1, vmax=7, cmap='jet'
         )
@@ -221,10 +221,10 @@ class MeshDash(GenMeshMaker):
         for hemi in hemi_list:
             for i_roi,roi in enumerate(roi_list):
                 # Load roi index:
-                roi_bool = dag_load_roi(self.sub, roi, fs_dir=self.fs_dir, split_LR=True)[hemi]
+                roi_bool = dpu_load_roi(self.sub, roi, fs_dir=self.fs_dir, split_LR=True)[hemi]
                 if roi_bool.sum()==0:
                     continue
-                border_vx_list = dag_find_border_vx_in_order(
+                border_vx_list = dpu_find_border_vx_in_order(
                     roi_bool=roi_bool, 
                     mesh_info=self.mesh_info[mesh_name][hemi], 
                     return_coords=False,
@@ -282,7 +282,7 @@ class MeshDash(GenMeshMaker):
         # Add rois 
         self.roi_obj = []
         self.roi_list = kwargs.get('roi_list', [])
-        self.roi_list = dag_roi_list_expand(sub=self.sub, roi_list=self.roi_list, fs_dir=self.fs_dir)
+        self.roi_list = dpu_roi_list_expand(sub=self.sub, roi_list=self.roi_list, fs_dir=self.fs_dir)
         self.web_add_roi(self.roi_list)
         self.web_df = pd.DataFrame()
 
@@ -340,14 +340,14 @@ class MeshDash(GenMeshMaker):
         mesh_name = kwargs.get('mesh_name', 'inflated')
         combine_matches = kwargs.pop('combine_matches', False)
         # marker_kwargs = kwargs.get()
-        roi_cols = dag_get_col_vals(
+        roi_cols = dpu_get_col_vals(
             np.arange(len(roi_list)),
             vmin = -1, vmax=17, cmap='jet'
         )
         self.roi_obj = []
         roi_count = -1
         for i_roi,roi in enumerate(roi_list):
-            roi_bool = dag_load_roi(self.sub, roi, fs_dir=self.fs_dir, split_LR=True, combine_matches=combine_matches, recursive_search=True)
+            roi_bool = dpu_load_roi(self.sub, roi, fs_dir=self.fs_dir, split_LR=True, combine_matches=combine_matches, recursive_search=True)
             if 'lh' not in roi_bool.keys():
                 # We found extra matches!!!
                 print(f'Found extra matches for {roi}')
@@ -361,7 +361,7 @@ class MeshDash(GenMeshMaker):
                 for ih,hemi in enumerate(hemi_list):
                     if roi_bool[roi_extra][hemi].sum()==0:
                         continue
-                    border_vx_list = dag_find_border_vx_in_order(
+                    border_vx_list = dpu_find_border_vx_in_order(
                         roi_bool=roi_bool[roi_extra][hemi], 
                         mesh_info=self.mesh_info[mesh_name][hemi], 
                         return_coords=False,
@@ -467,7 +467,7 @@ class MeshDash(GenMeshMaker):
             if not return_cmap:
                 return disp_rgb
             # Save CMAP to svg
-            cmap_fig = dag_cmap_plotter(
+            cmap_fig = dpu_cmap_plotter(
                 cmap=cmap_dict['cmap'], 
                 vmin=cmap_dict['vmin'], 
                 vmax=cmap_dict['vmax'], 
@@ -1127,7 +1127,7 @@ class MeshDash(GenMeshMaker):
                 100, 
             )
             edges, bin, patches = ax.hist(data, bins)
-            bin_cols = dag_get_col_vals(
+            bin_cols = dpu_get_col_vals(
                 col_vals=bin,
                 cmap=self.current_col_args['c_cmap'],
                 vmin=self.current_col_args['c_vmin'],
@@ -1172,7 +1172,7 @@ class MeshDash(GenMeshMaker):
         for hemi in self.web_hemi_list:
             # INTERPOLATE
 
-            new_vx_coords[hemi] = dag_mesh_interpolate(
+            new_vx_coords[hemi] = dpu_mesh_interpolate(
                 coords1=self.mesh_info[old_mesh][hemi]['coords'],
                 coords2=self.mesh_info[new_mesh][hemi]['coords'],
                 interp=inflate,
@@ -1314,7 +1314,7 @@ class MeshDash(GenMeshMaker):
                 data=data,
                 **kwargs
                 )
-        this_cmap = dag_cmap_plotter(
+        this_cmap = dpu_cmap_plotter(
                 cmap=cmap_dict['cmap'], 
                 vmin=cmap_dict['vmin'], 
                 vmax=cmap_dict['vmax'], 

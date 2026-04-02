@@ -6,7 +6,7 @@ import re
 from copy import copy
 import matplotlib as mpl
 import matplotlib.colors as mcolors
-from dpu_mini.stats import dag_rescale_bw
+from dpu_mini.stats import dpu_rescale_bw
 
 # Load custom color maps
 path_to_utils = os.path.abspath(os.path.dirname(__file__))
@@ -16,7 +16,7 @@ with open(custom_col_path, 'r') as fp:
     custom_col_dict = json.load(fp)
 
 
-def dag_cmap_from_str(cmap_name, **kwargs):
+def dpu_cmap_from_str(cmap_name, **kwargs):
     '''from a string make a cmap on the fly!
     Codes
 
@@ -26,7 +26,7 @@ def dag_cmap_from_str(cmap_name, **kwargs):
 
     '''
     try:
-        cmap = dag_get_cmap(cmap_name, **kwargs)
+        cmap = dpu_get_cmap(cmap_name, **kwargs)
         print(f'{cmap_name} exists')
         return cmap
     except:
@@ -65,21 +65,21 @@ def dag_cmap_from_str(cmap_name, **kwargs):
     }
     if '&' in cmap_name: # Stack cmaps (existing)
         cmap_list = cmap_name.split('&')
-        cmap = dag_stack_cmaps(cmap_list=cmap_list, **save_cmap_kwargs)    
+        cmap = dpu_stack_cmaps(cmap_list=cmap_list, **save_cmap_kwargs)    
         temp_cmap_name = 'temp'
     elif '*' in cmap_name: # Stack colors 
-        cmap = dag_make_custom_cmap(col_list=cmap_name.split('*'), **save_cmap_kwargs)
+        cmap = dpu_make_custom_cmap(col_list=cmap_name.split('*'), **save_cmap_kwargs)
         temp_cmap_name = 'temp'
 
     else:
         temp_cmap_name = cmap_name    
 
-    cmap = dag_get_cmap(temp_cmap_name, **get_cmap_kwargs)    
+    cmap = dpu_get_cmap(temp_cmap_name, **get_cmap_kwargs)    
     
     return cmap
 import hashlib
-def dag_hash_col_from_str(col_str):
-    '''dag_hash_col_from_str
+def dpu_hash_col_from_str(col_str):
+    '''dpu_hash_col_from_str
     Get a unique hash from a color string
     '''
     # Generate an MD5 hash of the input string
@@ -93,11 +93,11 @@ def dag_hash_col_from_str(col_str):
     return color
 
 
-def dag_get_col_vals(col_vals, cmap, vmin=None, vmax=None, str_search=False):
+def dpu_get_col_vals(col_vals, cmap, vmin=None, vmax=None, str_search=False):
     try:
-        cmap = dag_get_cmap(cmap)
+        cmap = dpu_get_cmap(cmap)
     except:
-        cmap = dag_cmap_from_str(cmap)
+        cmap = dpu_cmap_from_str(cmap)
     # cmap = mpl.cm.__dict__[cmap]
     cnorm = mpl.colors.Normalize()
     if vmin is not None:
@@ -106,8 +106,8 @@ def dag_get_col_vals(col_vals, cmap, vmin=None, vmax=None, str_search=False):
     col_out = cmap(cnorm(col_vals))
     return col_out
 
-def dag_rotate_cmap(cmap, rot, **kwargs):
-    '''dag_rotate_cmap
+def dpu_rotate_cmap(cmap, rot, **kwargs):
+    '''dpu_rotate_cmap
     Rotates a colormap by a certain amount
 
     Parameters
@@ -125,9 +125,9 @@ def dag_rotate_cmap(cmap, rot, **kwargs):
     cmap_name = kwargs.pop('cmap_name', f'{cmap}_rot{rot}')
     n_steps = 360
     col_steps = np.linspace(0,360,n_steps)
-    col_vals = dag_get_col_vals(col_steps, cmap, vmin=0, vmax=360)
+    col_vals = dpu_get_col_vals(col_steps, cmap, vmin=0, vmax=360)
     col_vals = np.roll(col_vals, int(rot), axis=0)
-    cmap = dag_make_custom_cmap(
+    cmap = dpu_make_custom_cmap(
         col_list=col_vals, 
         col_steps=col_steps, 
         cmap_name=cmap_name,
@@ -135,7 +135,7 @@ def dag_rotate_cmap(cmap, rot, **kwargs):
         )
     return cmap
 
-def dag_stack_cmaps(cmap_list, save_cmap=False, **kwargs):
+def dpu_stack_cmaps(cmap_list, save_cmap=False, **kwargs):
     cmap_name = kwargs.pop('cmap_name', None)
     n_steps_per_cmap = kwargs.pop('n_steps_per_cmap', 100)
     n_cmaps = len(cmap_list)
@@ -143,9 +143,9 @@ def dag_stack_cmaps(cmap_list, save_cmap=False, **kwargs):
     col_list = []
     for i_cmap in cmap_list:
         try:
-            this_cmap = dag_get_cmap(i_cmap)
+            this_cmap = dpu_get_cmap(i_cmap)
         except:
-            this_cmap = dag_cmap_from_str(i_cmap)
+            this_cmap = dpu_cmap_from_str(i_cmap)
         c_norm = mpl.colors.Normalize()
         c_norm.vmin = 0
         c_norm.vmax = 1
@@ -161,7 +161,7 @@ def dag_stack_cmaps(cmap_list, save_cmap=False, **kwargs):
     if cmap_name is None:
         cmap_name = '_'.join(cmap_list)
         cmap_name = str.replace(cmap_name, '_r', 'rev')
-    new_cmap = dag_make_custom_cmap(
+    new_cmap = dpu_make_custom_cmap(
         col_list=col_list, 
         col_steps=col_steps, 
         cmap_name=cmap_name, 
@@ -172,7 +172,7 @@ def dag_stack_cmaps(cmap_list, save_cmap=False, **kwargs):
     return new_cmap    
 
 
-def dag_make_custom_cmap(col_list, col_steps=None, **kwargs):
+def dpu_make_custom_cmap(col_list, col_steps=None, **kwargs):
     """Return a LinearSegmentedColormap
     col_list        list of colors (can be rgb tuples or something which can be converted to rgb tuples by mcolors.ColorConverter().to_rgb)
     col_steps
@@ -192,7 +192,7 @@ def dag_make_custom_cmap(col_list, col_steps=None, **kwargs):
         col_val = np.array(col_steps) # use the specified steps
     
     # Rescale to 0-1 (with option to log scale)
-    col_val = dag_rescale_bw(col_val, log=do_log)
+    col_val = dpu_rescale_bw(col_val, log=do_log)
     
     # Change any values to rgb tuple
     conv2rgb = mcolors.ColorConverter().to_rgb
@@ -215,22 +215,22 @@ def dag_make_custom_cmap(col_list, col_steps=None, **kwargs):
                 is_255 = True
     if is_255:
         for i_col, v_col in enumerate(col_list):
-            col_list[i_col] = dag_rgb(*col_list[i_col])     
+            col_list[i_col] = dpu_rgb(*col_list[i_col])     
     custom_cmap = mcolors.LinearSegmentedColormap.from_list(cmap_name, list(zip(col_val, col_list)))
     # save as temp cmap then apply the kwargs
-    # dag_save_cmap(
+    # dpu_save_cmap(
     #     cmap_name='temp',
     #     col_steps=col_val,
     #     col_list=col_list,
     #     ow=True,
     #     )
-    # custom_cmap = dag_get_cmap('temp', **kwargs)
+    # custom_cmap = dpu_get_cmap('temp', **kwargs)
     if save_cmap:
         if cmap_name=='':
             print('specify name!')
             return        
         
-        dag_save_cmap(
+        dpu_save_cmap(
             cmap_name=cmap_name,
             col_steps=col_val,
             col_list=col_list,
@@ -239,8 +239,8 @@ def dag_make_custom_cmap(col_list, col_steps=None, **kwargs):
         
     return custom_cmap
 
-def dag_get_cmap(cmap_name, **kwargs):    
-    '''dag_get_cmap
+def dpu_get_cmap(cmap_name, **kwargs):    
+    '''dpu_get_cmap
     Loads custom cmaps (specified in cmaps.json) 
     or default matplotlib versions
     or something specified with a dictionary
@@ -273,22 +273,22 @@ def dag_get_cmap(cmap_name, **kwargs):
         col_list = kwargs.get('col_list', None)
         col_steps = kwargs.get('col_steps', None)        
     
-    cc_dict = dag_load_custom_col_dict()    
+    cc_dict = dpu_load_custom_col_dict()    
     if col_list is not None:
-        this_cmap = dag_make_custom_cmap(col_list=col_list, col_steps=col_steps, cmap_name=cmap_name)
+        this_cmap = dpu_make_custom_cmap(col_list=col_list, col_steps=col_steps, cmap_name=cmap_name)
     elif cmap_name in cc_dict.keys():
         col_list = cc_dict[cmap_name]['col_list']
         col_steps = cc_dict[cmap_name]['col_steps']
         if do_log:
-            col_steps = dag_rescale_bw(col_steps, log=True)
-        this_cmap = dag_make_custom_cmap(col_list=col_list, col_steps=col_steps, cmap_name=cmap_name)
+            col_steps = dpu_rescale_bw(col_steps, log=True)
+        this_cmap = dpu_make_custom_cmap(col_list=col_list, col_steps=col_steps, cmap_name=cmap_name)
     elif cmap_name in mpl.cm.__dict__.keys():
         this_cmap = mpl.cm.__dict__[cmap_name]
         if do_log:
             col_list = this_cmap(np.linspace(0,1,100))
-            this_cmap = dag_make_custom_cmap(col_list=col_list, log=True)    
+            this_cmap = dpu_make_custom_cmap(col_list=col_list, log=True)    
     if do_rotation:
-        this_cmap = dag_rotate_cmap(this_cmap, do_rotation, **kwargs)
+        this_cmap = dpu_rotate_cmap(this_cmap, do_rotation, **kwargs)
 
     if do_reverse:
         this_cmap = this_cmap.reversed()
@@ -296,8 +296,8 @@ def dag_get_cmap(cmap_name, **kwargs):
 
     return this_cmap
 
-def dag_delete_cmap(cmap_name, sure=False):
-    cc_dict = dag_load_custom_col_dict()
+def dpu_delete_cmap(cmap_name, sure=False):
+    cc_dict = dpu_load_custom_col_dict()
     if cmap_name in cc_dict.keys():
         if not sure:
             print(f'Are you sure you want to delete {cmap_name}? (y/n)')
@@ -317,10 +317,10 @@ def dag_delete_cmap(cmap_name, sure=False):
         json.dump(new_cc_dict, fp,sort_keys=True, indent=4)
     return    
     
-def dag_save_cmap(cmap_name, col_list, col_steps=None, ow=False):
+def dpu_save_cmap(cmap_name, col_list, col_steps=None, ow=False):
     if col_steps is None:
         col_steps = np.linspace(0,1, len(col_list))
-    cc_dict = dag_load_custom_col_dict()
+    cc_dict = dpu_load_custom_col_dict()
     while (cmap_name in custom_col_dict.keys()) and (not ow):
         print(f'{cmap_name} already exists, overwrite? (y/n)')
         overwrite = input()
@@ -340,11 +340,11 @@ def dag_save_cmap(cmap_name, col_list, col_steps=None, ow=False):
         json.dump(cc_dict, fp,sort_keys=True, indent=4)
     return
 
-def dag_load_custom_col_dict():
+def dpu_load_custom_col_dict():
     with open(custom_col_path, 'r') as fp:
         cc_dict = json.load(fp)        
     return cc_dict
 
-def dag_rgb(r,g,b):
+def dpu_rgb(r,g,b):
     return [r/255,g/255,b/255]
 

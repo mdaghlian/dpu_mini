@@ -31,7 +31,7 @@ from dpu_mini.utils import *
 '''
 MUCH STOLEN FROM JHEIJ LINESCANNING!!!
 '''
-def dag_add_cmap_to_pyctx(cmap_name, pyctx_cmap_name=None, **kwargs):    
+def dpu_add_cmap_to_pyctx(cmap_name, pyctx_cmap_name=None, **kwargs):    
     pyc_cmap_path = cortex.config.get('webgl', 'colormaps')
     if pyctx_cmap_name is None:
         pyctx_cmap_name = 'pyc_'+cmap_name
@@ -47,14 +47,14 @@ def dag_add_cmap_to_pyctx(cmap_name, pyctx_cmap_name=None, **kwargs):
             cval_arr = np.linspace(1,0,256)
         
         # [1] 1D version
-        oneD_rgba = dag_get_col_vals(cval_arr, cmap_name)
+        oneD_rgba = dpu_get_col_vals(cval_arr, cmap_name)
         oneD_rgba = oneD_rgba[np.newaxis,:,:]
         oneD_rgba = (oneD_rgba * 255).astype(np.uint8)
         image = Image.fromarray(oneD_rgba)
         image.save(opj(pyc_cmap_path, cname_1D))
         # [2] 2D version
         twoD_arr, alpha_val = np.meshgrid(cval_arr, np.linspace(1,0,256))
-        twoD_rgba = dag_get_col_vals(twoD_arr,cmap_name)
+        twoD_rgba = dpu_get_col_vals(twoD_arr,cmap_name)
         # -> enter alpha levels
         # twoD_rgba[:,-1,:-1] = 0
         # alpha_val[alpha_val<.5] = 0
@@ -856,7 +856,7 @@ class PyctxMaker(GenMeshMaker):
             data_alpha[~data_mask] = 0 # Make values to be masked have alpha=0
             cmap = kwargs.get('cmap', None) # 'autumnblack_alpha_2D') 
             if cmap is not None:   
-                cmap = dag_add_cmap_to_pyctx(cmap, return_names=ctx_method)
+                cmap = dpu_add_cmap_to_pyctx(cmap, return_names=ctx_method)
                 cmap = cmap.replace('.png','')
                 cmap_list = get_pyctx_cmap_list()
                 if cmap not in cmap_list:
@@ -1065,12 +1065,12 @@ class PyctxMaker(GenMeshMaker):
                 centre_bool_hemi[hemi] |= self._return_roi_bool_both_hemis(centre_roi)[hemi]
             # Cut a box around them?            
             if cut_box:
-                hemi_kwargs['vx_to_include'] = dag_cut_box(
+                hemi_kwargs['vx_to_include'] = dpu_cut_box(
                     mesh_info=self.mesh_info['inflated'][hemi],
                     vx_bool=centre_bool_hemi[hemi],
                 )
             hemi_kwargs['centre_bool'] = centre_bool_hemi[hemi]
-            pts,polys,vx_to_include = dag_flatten(
+            pts,polys,vx_to_include = dpu_flatten(
                 mesh_info=self.mesh_info[hemi_project][hemi], 
                 method=method,
                 **hemi_kwargs)        
@@ -1259,7 +1259,7 @@ class PyctxMaker(GenMeshMaker):
             flat_name = self.flat_name
         # Find the flatmap -> try the specified flat_name
         for hemi in ['lh','rh']:
-            flat_surf_path = dag_find_file_in_folder(
+            flat_surf_path = dpu_find_file_in_folder(
                 filt=[hemi, flat_name, 'gii'],
                 path=self.custom_flat_files,
                 return_msg=None,
@@ -1273,7 +1273,7 @@ class PyctxMaker(GenMeshMaker):
             os.system(f'cp {flat_surf_path} {opj(self.sub_ctx_path, "surfaces", f"flat_{hemi}.gii")}')
             
         # Now the overlays
-        svg_overlay = dag_find_file_in_folder(
+        svg_overlay = dpu_find_file_in_folder(
             filt=[flat_name, '.svg'],
             path=self.custom_flat_files,
             return_msg=None,
@@ -1357,7 +1357,7 @@ class PyctxMaker(GenMeshMaker):
             path_data += f"Z"            
             # Insert into SVG
             svgpath = etree.SubElement(roilayer, "path")
-            stroke_col = dag_hash_col_from_str(roi_name)
+            stroke_col = dpu_hash_col_from_str(roi_name)
             svgpath.attrib["style"] = f"fill:none;stroke:{stroke_col};stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opactiy:1"
             svgpath.attrib["d"] = path_data
             # svgpath.attrib["sodipodi:nodetypes"] = "c" * len(pts)
@@ -1377,7 +1377,7 @@ class PyctxMaker(GenMeshMaker):
         self.mesh_info['flat'] = {}
         for hemi in ['lh','rh']:
             # Find the flatmap -> try the specified flat_name
-            flat_surf_path = dag_find_file_in_folder(
+            flat_surf_path = dpu_find_file_in_folder(
                 filt=[hemi, flat_name, 'gii'],
                 path=self.custom_flat_files,
                 return_msg=None,
@@ -1434,7 +1434,7 @@ class PyctxMaker(GenMeshMaker):
     #         if centre_roi is not None:
     #             # Load the ROI bool for this hemisphere
     #             centre_bool = self._return_roi_bool_both_hemis(centre_roi)[hemi]
-    #             vx_to_remove = dag_cut_box(
+    #             vx_to_remove = dpu_cut_box(
     #                 mesh_info=self.mesh_info['inflated'][hemi],
     #                 vx_bool=centre_bool,
     #             )!=1
@@ -1443,7 +1443,7 @@ class PyctxMaker(GenMeshMaker):
     #             vx_to_remove = self._return_roi_bool_both_hemis(
     #                 roi_name='occ', y_max=cut_along_y)[hemi]                
     #         # Now lets get the outer edge list
-    #         border_edges = dag_get_roi_border_edge(
+    #         border_edges = dpu_get_roi_border_edge(
     #             roi_bool=~vx_to_remove,  
     #             mesh_info=self.mesh_info['inflated'][hemi]
     #             )
@@ -1502,7 +1502,7 @@ class PyctxMaker(GenMeshMaker):
     #         freesurfer_subject_dir=self.fs_dir,
     #     )
 
-def dag_write_patch(filename, vertex_index, x_coords, y_coords, z_coords):
+def dpu_write_patch(filename, vertex_index, x_coords, y_coords, z_coords):
     """
     Writes vertex data to a binary file.
     
