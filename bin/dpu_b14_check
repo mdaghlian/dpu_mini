@@ -6,6 +6,7 @@
 
 import sys
 import os
+import subprocess
 opj = os.path.join
 
 
@@ -22,13 +23,6 @@ def main(argv):
     Open the freesurfer surfaces for a subject
 
     Args:
-        --sub               subject number
-        --to_show           <surf_names>...
-        --find              comma separated list of strings to search for in the surface names
-        --exclude           comma separated list of strings to exclude from the search
-        --custom_only       only search in the custom surfaces
-        --roi_list          list of rois, or roi patterns to load
-        --hemi_list         list of hemispheres to load (optional default is both)
         ...
         --help/-h          help
 
@@ -39,67 +33,37 @@ def main(argv):
     '''
     # Load the fitting settings, add in the new info
     # [1] Setup parameters:
-    sub = None
-    to_show = []
-    custom_only = False
-    print_overlay = False
-    do_search = False
-    search_incl = []
-    search_excl = []
-    inclusive_or = False
+    sub = argv[0]
     fs_dir=os.environ['SUBJECTS_DIR']
     kwargs = {}
-    for i,arg in enumerate(argv):
+    for i,arg in enumerate(argv[1:]):
         if '--sub' in arg:
-            sub = dag_hyphen_parse('sub',argv[i+1])
-        elif '--print_overlay' in arg:
-            print_overlay = True
-
-        elif '--to_show' in arg:
-            to_show = argv[i+1]
-            if ',' in to_show:
-                to_show = to_show.split(',')
-            if not isinstance(to_show, list):
-                to_show = [to_show]
-        elif '--find' in arg:
-            do_search = True
-            search_incl = argv[i+1]
-            if ',' in search_incl:
-                search_incl = search_incl.split(',')
-            if not isinstance(search_incl, list):
-                search_incl = [search_incl]
-        elif '--exclude' in arg:
-            search_excl = argv[i+1]
-            if ',' in search_excl:
-                search_excl = search_excl.split(',')
-            if not isinstance(search_excl, list):
-                search_excl = [search_excl]
-        elif '--custom_only' in arg:
-            custom_only = True
-        elif '--fs_dir' in arg:
-            fs_dir = argv[i+1]
-        elif '--inclusive_or' in arg:            
-            inclusive_or=True
+            sub = argv[i+1]
         elif ('-h' == arg) or ('--help' == arg):
             print(main.__doc__)
             sys.exit()
-
-            
         elif '--' in arg: # ********** ARBITRARY KWARGS **********
             # If argv[i] is an argument, then argv[i+1] is its value
             this_kwarg_value = dag_arg_checker(argv, i+1)
             # Add to kwargs
             this_kwarg = arg.replace('--','')
             kwargs[this_kwarg] = this_kwarg_value
-
-
+    sub = dag_hyphen_parse('sub', sub)
     # [3] Check the arguments
     if sub is None:
         raise ValueError('Subject number not specified')
-    
     # Make fs object
     fs = FSMaker(sub, fs_dir=fs_dir)
-    
+    # 0 benson14_angle.mgz
+    # 1 benson14_eccen.mgz
+    # 2 benson14_sigma.mgz
+    # 3 benson14_varea.mgz
+    # Make the overlays 
+    fs_cmd = f'dpu_make_fs_overlay --overlay_name benson14_angle '
+    fs_cmd += f' --vmin 0 --vmax 180 --output_dir {fs.sub_surf_dir}'
+    subprocess.run(fs_cmd, shell=True, cwd=fs.sub_surf_dir)   
+    fs.open_fs_surface('benson14_angle')
+    return    
     if print_overlay:
         if to_show is []:
             surf_name = 'curv'

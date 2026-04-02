@@ -69,30 +69,50 @@ def dag_arg_checker(arg2check, idx=None):
         arg_out = arg2check   
 
     return arg_out
-def dag_hyphen_parse(str_prefix, str_in):
-    '''dag_hyphen_parse
-    checks whether a string has a prefix attached.
-    Useful for many BIDS format stuff, and when passing arguments on a lot 
-    (sometimes it is not clear whether the prefix will be present or not...)
 
-    E.g., I want to make sure that string "task_name" has the format "task-A" 
-    part_task_name = "A"
-    full_task_name = "task-A"
-    
-    dag_hyphen_parse("task", part_task_name)
-    dag_hyphen_parse("task", full_task_name)
+def dag_hyphen_parse(prefix: str, value: str) -> str:
+    """Ensure a BIDS-style prefixed string has the form `prefix-value`.
 
-    Both output -> "task-A"
-    
-    '''
-    if str_prefix in str_in:
-        str_out = str_in
-    else: 
-        str_out = f'{str_prefix}-{str_in}'
-    # Check for multiple hyphen
-    while '--' in str_out:
-        str_out = str_out.replace('--', '-')
-    return str_out
+    Handles cases where the prefix may or may not already be present,
+    so callers don't need to track whether they have a bare value or a
+    full label.
+
+    Parameters
+    ----------
+    prefix : str
+        The BIDS prefix, e.g. ``"task"``, ``"sub"``, ``"ses"``.
+    value : str
+        Either a bare value (``"A"``) or an already-prefixed label
+        (``"task-A"``).
+
+    Returns
+    -------
+    str
+        The canonical ``"prefix-value"`` string.
+
+    Examples
+    --------
+    >>> dag_hyphen_parse("task", "A")
+    'task-A'
+    >>> dag_hyphen_parse("task", "task-A")
+    'task-A'
+    >>> dag_hyphen_parse("sub", "01")
+    'sub-01'
+    >>> dag_hyphen_parse("sub", "sub-01")
+    'sub-01'
+    """
+    expected_prefix = f"{prefix}-"
+
+    if value.startswith(expected_prefix):
+        # Strip prefix and any accidental extra hyphens before rebuilding
+        bare = value[len(expected_prefix):].lstrip("-")
+    else:
+        bare = value.strip("-")
+
+    if not bare:
+        raise ValueError(f"No value found after prefix '{prefix}' in '{value}'")
+
+    return f"{expected_prefix}{bare}"
 
 def dag_find_file_in_folder(filt, path, return_msg='error', exclude=None, recursive=False, file_limit=9999, inclusive_or=False):
     """get_file_from_substring

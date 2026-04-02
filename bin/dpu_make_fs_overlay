@@ -12,7 +12,7 @@ opj = os.path.join
 import numpy as np
 
 from dpu_mini.fs_tools import dag_make_overlay_str
-from dpu_mini.utils import dag_arg_checker
+from dpu_mini.utils import dag_arg_checker, dag_hyphen_parse
 
 
 def main(argv):
@@ -42,7 +42,7 @@ def main(argv):
     for i,arg in enumerate(argv):
         if '--sub' in arg:
             print(f'Using freesurfer directory for {arg}')
-            output_dir = opj(os.environ['SUBJECTS_DIR'], f'sub-{argv[i+1]}', 'surf', 'custom')
+            output_dir = opj(os.environ['SUBJECTS_DIR'], dag_hyphen_parse('sub', argv[i+1]), 'surf', 'custom')
             
         elif '--overlay_name' in arg:
             overlay_name = argv[i+1]
