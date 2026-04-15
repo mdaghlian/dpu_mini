@@ -28,6 +28,9 @@ from dpu_mini.mesh_format import *
 from dpu_mini.cmap_functions import *
 from dpu_mini.utils import *
 
+from cortex.database import db
+cortex.db = db
+
 '''
 MUCH STOLEN FROM JHEIJ LINESCANNING!!!
 '''
@@ -770,7 +773,6 @@ class PyctxMaker(GenMeshMaker):
         #         # whitematter_surf='smoothwm'
         #         )        
         # # reload database after import
-        # cortex.db.reload_subjects()
         #this provides a nice workaround for pycortex opacity issues, at the cost of interactivity    
         # Get curvature
         try:
@@ -1011,7 +1013,7 @@ class PyctxMaker(GenMeshMaker):
 
         TODO: remove cut from Y 
         '''
-        method = kwargs.pop('method', 'latlon')
+        method = kwargs.pop('method', 'sph')
         morph = kwargs.pop('morph', 0) # How much to dilate or erode the mask (if doing igl)
         hemi_project = kwargs.get('hemi_project', 'sphere')
         flat_name = kwargs.get('flat_name', self.flat_name)

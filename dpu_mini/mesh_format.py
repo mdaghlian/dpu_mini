@@ -54,7 +54,7 @@ def dpu_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
     gdist_method = kwargs.get('gdist_method', 'pycortex')
     submesh = dpu_submesh_from_mesh(mesh_info=mesh_info, submesh_bool=submesh_bool, **kwargs)
     if gdist_method=='pycortex':
-        from dpu_mini.pyctx_cannibalized.surface import Surface
+        from dpu_mini.pyctx.surface import Surface
         sm = Surface(submesh['coords'], submesh['faces'])
         nvx = len(submesh['coords'])
         print(nvx)
@@ -440,23 +440,16 @@ def dpu_dilate_and_drop(mesh_info, vx_bool_start, **kwargs):
 
 def dpu_sph2flat(coords, **kwargs):
     '''Flatten a sphere to 2D
-    This is a probably a bad way to flatten the cortex
-    You should probably do proper surface cuts etc...
-    But this is a quick and dirty way to do it. And may even be ok when you do if for ROIs...
-    It is a work in progress, which may improve overtime...
-    
-    TODO: 
-    * option to define the centre... 
-    * better way to do the projection?
-    https://en.wikipedia.org/wiki/Map_projection
-    
-    
     # Adjust longitudes based on the new center longitude
     lon -= center_lon
     
     # Ensure lon is within the range [-pi, pi]
     lon = (lon + np.pi) % (2 * np.pi) - np.pi    
     '''
+    return_xy = kwargs.get('return_xy', True)
+    cut_circle = kwargs.get('cut_circle', False)
+    vx_to_include = kwargs.get('vx_to_include', np.ones(coords.shape[0], dtype=bool))
+
     # First move to 0,0,0...
     coords -= coords.mean(axis=0)
     # Sanity check -> is distance to 0 should be the same for all points    
@@ -464,34 +457,79 @@ def dpu_sph2flat(coords, **kwargs):
     atol = 10
     if not np.allclose(d20, d20[0], atol=atol):
         print(f'Warning: Not all points are equidistant from 0,0,0 atol={atol}')
+    else:
+        coords = coords / np.sqrt(np.sum(coords**2, axis=-1))[...,np.newaxis]
+    # # Now flatten to 2D using longitude and latitude
+    # x,y,z = coords[:,0], coords[:,1], coords[:,2]
 
-    # Now flatten to 2D using longitude and latitude
-    x,y,z = coords[:,0], coords[:,1], coords[:,2]
-    lat= np.arctan2(z, np.sqrt(x**2 + y**2)) * 2 # 
-    lon = np.arctan2(y, x)
+    # OLD VERSION
+    # lat= np.arctan2(z, np.sqrt(x**2 + y**2)) * 2 # 
+    # lon = np.arctan2(y, x)
     # print(f'Lat: {lat.min()} {lat.max()}')
     # print(f'Lon: {lon.min()} {lon.max()}')
 
 
     # Adjust longitudes based on the new center longitude
     centre_bool = kwargs.get('centre_bool', None)
-    if centre_bool is not None:
-        centre_lat = lat[centre_bool].mean()
-        centre_lon = lon[centre_bool].mean()    
-        print('centering!')
-        lat -= centre_lat
-        lat = (lat + np.pi) % (2 * np.pi) - np.pi
-        lon -= centre_lon
-        lon = (lon + np.pi) % (2 * np.pi) - np.pi
+    rotate = kwargs.get('rotate', True)
+    if (centre_bool is not None) & rotate:
+        # # OLD VERSION
+        # centre_lat = lat[centre_bool].mean()
+        # centre_lon = lon[centre_bool].mean()    
+        # print('centering!')
+        # lat -= centre_lat
+        # lat = (lat + np.pi) % (2 * np.pi) - np.pi
+        # lon -= centre_lon
+        # lon = (lon + np.pi) % (2 * np.pi) - np.pi
+        
+        # Mean direction of the centre region
+        centre_xyz = coords[centre_bool].mean(axis=0)
+        centre_xyz /= np.linalg.norm(centre_xyz)   # unit vector
 
-    return lon, lat
+        # We want to rotate centre_xyz → [1, 0, 0]
+        # Use Rodrigues' rotation formula to build the rotation matrix.
+        target = np.array([0.0, -1.0, 0.0])
+        v = np.cross(centre_xyz, target)          # rotation axis (not normalised)
+        s = np.linalg.norm(v)                     # sin of angle
+        c = np.dot(centre_xyz, target)            # cos of angle
 
+        if s < 1e-10:
+            # Already aligned (or exactly opposite — handle both)
+            R = np.eye(3) if c > 0 else -np.eye(3)
+        else:
+            # Skew-symmetric cross-product matrix
+            K = np.array([[ 0,    -v[2],  v[1]],
+                          [ v[2],  0,    -v[0]],
+                          [-v[1],  v[0],  0   ]])
+            R = np.eye(3) + K + K @ K * (1 - c) / (s ** 2)
+
+        coords = (R @ coords.T).T   # apply rotation to all points
+
+    x,y,z = coords[:,0], coords[:,1], coords[:,2]
+    if return_xy:
+        # Orthographic projection — a literal "photo" of the sphere
+        # looking along the +X axis.  Points behind the sphere (x < 0)
+        # are still included; callers can filter with x > 0 if needed.
+        u = x.copy()
+        v = z.copy()
+
+    else:
+        # Equirectangular (lon / lat)
+        lat = np.arctan2(z, np.sqrt(x**2 + y**2)) * 2
+        lon = np.arctan2(y, x)
+        u = lon.copy()
+        v = lat.copy()
+    
+    if cut_circle:
+        vx_to_include &= y<-cut_circle
+    return u,v, vx_to_include
+    
 from sklearn.manifold import MDS
 import scipy.sparse.csgraph as csgraph
 
 def dpu_lbo_flatten(mesh_info):
     # build adjacency‐graph
-    from dpu_mini.pyctx_cannibalized.surface import Surface
+    from dpu_mini.pyctx.surface import Surface
     sm = Surface(mesh_info['coords'], mesh_info['faces'])
     B, D, W, V = sm.laplace_operator    
     
@@ -528,7 +566,7 @@ def dpu_igl_flatten(mesh_info, **kwargs):
     '''
     centre_bool = kwargs.pop('centre_bool', 'bleep') # np.ones_like(mesh_info['x'], dtype=bool))
     initial_guess = kwargs.pop('initial_guess', None)
-    align_to_latlon = kwargs.pop('align_to_latlon', True)
+    align_to_sph = kwargs.pop('align_to_sph', True)
     align_mask = kwargs.pop('align_mask', None)    
     roi_bool = centre_bool.copy()
     successful_flatten = False
@@ -611,14 +649,14 @@ def dpu_igl_flatten(mesh_info, **kwargs):
             # print(f'Corr x: {corr_x:.2f} y: {corr_y:.2f}')
             # bloop
             print(f'Successful flatten with morph={total_morph}')
-            # --- NEW: align IGL result to latlon (optional) ---
-            if align_to_latlon:
+            # --- NEW: align IGL result to sph (optional) ---
+            if align_to_sph:
                 try:
-                    uva = dpu_align_igl_to_latlon(
+                    uva = dpu_align_igl_to_sph(
                         submesh_info=submesh_info, uva=uva, mesh_info=mesh_info, **kwargs)
                     print('Aligned IGL flatten to lat/lon projection (similarity transform).')
                 except Exception as e:
-                    print('Warning: alignment to latlon failed, proceeding without alignment:', e)
+                    print('Warning: alignment to sph failed, proceeding without alignment:', e)
 
             print('Here it looks like this...')
             fig, axs = plt.subplots(1,2)
@@ -745,7 +783,7 @@ def align_points(a, b, align_mask=None):
 
     return b_transformed
 
-def dpu_align_igl_to_latlon(submesh_info, uva, mesh_info, align_mask=None, **kwargs):
+def dpu_align_igl_to_sph(submesh_info, uva, mesh_info, align_mask=None, **kwargs):
     """
     Rotate to align with the sphere method 
     """
@@ -767,13 +805,13 @@ def dpu_flatten(mesh_info, **kwargs):
     This is a bad way to flatten the sphere - you should probably do proper surface cuts etc...    
     flatten them to 2D (just polar)
     '''
-    method = kwargs.get('method', 'latlon')
+    method = kwargs.get('method', 'sph')
     vx_to_include = kwargs.get('vx_to_include', np.ones_like(mesh_info['x'], dtype=bool))
     f_to_include = kwargs.get('f_to_include', np.ones_like(mesh_info['i'], dtype=bool))
     z = kwargs.get('z', 0)
     flat_info = {}
-    if method=='latlon':
-        p1, p2 = dpu_sph2flat(mesh_info['coords'], **kwargs)
+    if method=='sph':
+        p1, p2, vx_to_include = dpu_sph2flat(mesh_info['coords'], **kwargs)
     elif method=='igl':
         # try:
         p1, p2 = dpu_sph2flat(mesh_info['coords'], **kwargs)
@@ -822,7 +860,7 @@ def dpu_flatten(mesh_info, **kwargs):
     m_face_lengths = face_lengths.mean()
     std_face_lengths = face_lengths.std()
     # Find the faces with edges > 4*std
-    f_w_long_edges = face_lengths > m_face_lengths + 4*std_face_lengths
+    f_w_long_edges = face_lengths > m_face_lengths + 10*std_face_lengths
 
     # If these are in the faces to include then remove them...
     f_to_include[f_with_missing_vx] = False

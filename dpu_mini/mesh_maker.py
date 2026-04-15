@@ -491,7 +491,7 @@ class GenMeshMaker(FSMaker):
         from sklearn.decomposition import PCA
         if not os.path.exists(self.custom_surf_dir):
             os.makedirs(self.custom_surf_dir)
-        method = kwargs.pop('method', 'latlon')
+        method = kwargs.pop('method', 'sph')
         morph = kwargs.pop('morph', 0) # How much to dilate or erode the mask (if doing igl)
         hemi_project = kwargs.get('hemi_project', 'sphere')
         flat_name = kwargs.get('flat_name', 'flat')
@@ -507,7 +507,8 @@ class GenMeshMaker(FSMaker):
             'lh': vx_to_include[:self.n_vx['lh']],
             'rh': vx_to_include[self.n_vx['lh']:]
         }
-        cut_box = kwargs.get('cut_box', False)                        
+        cut_box = kwargs.get('cut_box', False)    
+        cut_circle = kwargs.get('cut_circle', False)                        
         
         hemi_pts = {}
         hemi_polys = {}
@@ -528,20 +529,21 @@ class GenMeshMaker(FSMaker):
             if centre_roi is not None:
                 # Load the ROI bool for this hemisphere
                 centre_bool_hemi[hemi] |= self._return_roi_bool_both_hemis(centre_roi, **kwargs)[hemi]
-                print(centre_bool)
             # Cut a box around them?            
             if cut_box:
                 hemi_kwargs['vx_to_include'] = dpu_cut_box(
                     mesh_info=self.mesh_info['inflated'][hemi],
                     vx_bool=centre_bool_hemi[hemi],
                 )
+            elif cut_circle:
+                hemi_kwargs['vx_to_include'] = np.ones(self.n_vx[hemi], dtype=bool)
             else:
                 hemi_kwargs['vx_to_include'] = vx_to_include[hemi]
             hemi_kwargs['vx_to_include'] = dpu_mesh_morph(
                 mesh_info=self.mesh_info['inflated'][hemi], 
                 vx_bool=hemi_kwargs['vx_to_include'], 
                 morph=morph)
-            hemi_kwargs['centre_bool'] = hemi_kwargs['vx_to_include'] #centre_bool_hemi[hemi]
+            hemi_kwargs['centre_bool'] = centre_bool_hemi[hemi]
             pts,polys,_ = dpu_flatten(
                 mesh_info=self.mesh_info[hemi_project][hemi], 
                 method=method,
@@ -553,17 +555,17 @@ class GenMeshMaker(FSMaker):
             connected_pts[np.unique(polys)] = True
             flat[connected_pts] -= flat[connected_pts].mean(axis=0)
 
-            # ── PCA rotation: align principal axis of spread with x-axis ──────────
-            xy = flat[connected_pts, :2]
-            cov = np.cov(xy.T)
-            eigenvalues, eigenvectors = np.linalg.eigh(cov)
-            # eigh returns ascending order, so flip to get PC1 first
-            eigenvectors = eigenvectors[:, ::-1]
-            new_xy = xy @ eigenvectors
-            flat[connected_pts, 0] = new_xy[:,1]*-1
-            flat[connected_pts, 1] = new_xy[:,0]
-            scale_x = (infl_x.max() - infl_x.min()) / (flat[:, 0].max() - flat[:, 0].min())
-            flat *= scale_x * 3
+            # # ── PCA rotation: align principal axis of spread with x-axis ──────────
+            # xy = flat[connected_pts, :2]
+            # cov = np.cov(xy.T)
+            # eigenvalues, eigenvectors = np.linalg.eigh(cov)
+            # # eigh returns ascending order, so flip to get PC1 first
+            # eigenvectors = eigenvectors[:, ::-1]
+            # new_xy = xy @ eigenvectors
+            # flat[connected_pts, 0] = new_xy[:,1]*-1
+            # flat[connected_pts, 1] = new_xy[:,0]
+            # scale_x = (infl_x.max() - infl_x.min()) / (flat[:, 0].max() - flat[:, 0].min())
+            # flat *= scale_x * 3
             # do some cleaning...
             hemi_pts[hemi] = flat.copy()
             hemi_polys[hemi] = polys.copy()
@@ -571,11 +573,11 @@ class GenMeshMaker(FSMaker):
             if hemi == 'rh':
                 polys += len(hemi_pts['lh'])
             polys_combined.append(polys)
-
+        pts_combined[0][:,0] -=pts_combined[0][:,0].max() 
         pts_combined = np.vstack(pts_combined)
         polys_combined = np.vstack(polys_combined)
         self.add_flat_to_mesh_info(flat_name=flat_name, flat_pts=hemi_pts, flat_polys=hemi_polys)
-
+        self.rescale_mesh_info(flat_name)
 
     def flat_mpl(self, **kwargs):
         '''Plot using matplotlib 
@@ -602,7 +604,7 @@ class GenMeshMaker(FSMaker):
         disp_rgb, cmap_dict = self.return_display_rgb(
             data=data, split_hemi=True, return_cmap_dict=True, **kwargs
         )
-        # self.get_mesh_info(flat_name)
+
         mpts = {
             'lh': self.mesh_info[flat_name]['lh']['coords'],
             'rh': self.mesh_info[flat_name]['rh']['coords'],
@@ -615,7 +617,7 @@ class GenMeshMaker(FSMaker):
         ylim = [np.inf, -np.inf]
         for hemi in hemi_list: 
             if rot_angles is not None:
-                mpts[hemi] = dpu_coord_rot(mpts[hemi], rot_angles)         
+                mpts[hemi] = dpu_coord_rot(mpts[hemi], rot_angles)      
             if np.isnan(mpts[hemi][0][0]):
                 continue
             triang = mpl.tri.Triangulation(
@@ -623,11 +625,12 @@ class GenMeshMaker(FSMaker):
                 mpts[hemi][:,1],
                 triangles=mpolys[hemi],
             )
+            toincl = np.unique(mpolys[hemi])
 
-            xlim[0] = np.minimum(mpts[hemi][:,0].min(), xlim[0])
-            xlim[1] = np.maximum(mpts[hemi][:,0].max(), xlim[1])
-            ylim[0] = np.minimum(mpts[hemi][:,1].min(), ylim[0])
-            ylim[1] = np.maximum(mpts[hemi][:,1].max(), ylim[1])            
+            xlim[0] = np.minimum(mpts[hemi][toincl,0].min(), xlim[0])
+            xlim[1] = np.maximum(mpts[hemi][toincl,0].max(), xlim[1])
+            ylim[0] = np.minimum(mpts[hemi][toincl,1].min(), ylim[0])
+            ylim[1] = np.maximum(mpts[hemi][toincl,1].max(), ylim[1])            
             # Plot the triangulated data using tripcolor
             cmap = mpl.colors.ListedColormap(disp_rgb[hemi])
             c = np.arange(len(disp_rgb[hemi]))
@@ -637,10 +640,8 @@ class GenMeshMaker(FSMaker):
                 cmap=cmap,
                 shading='gouraud',  # Smooth interpolation between vertices
             )
-            print(xlim)
-            print(ylim)
-
         for roi in roi_list:
+
             roi_obj = self._return_roi_borders_in_order(roi)
             for roi_dict in roi_obj:
                 hemi = roi_dict['hemi']
@@ -683,116 +684,6 @@ class GenMeshMaker(FSMaker):
         ax.axis('off')
         return cmap_dict
     
-    def t3d_mpl(self, **kwargs):
-        '''Plot using matplotlib 
-        '''
-        data=kwargs.pop('data', None)
-        surf_name = kwargs.pop('surf_name', 'data')
-        rot_angles = kwargs.pop('rot_angles', None)
-        roi_list = kwargs.pop('roi_list', [])
-        if not isinstance(roi_list, list):
-            roi_list = [roi_list]
-        mesh_name = kwargs.pop('mesh_name', 'inflated')
-        try:
-            self.get_mesh_info(mesh_name)
-        except:
-            self.add_flat_to_mesh_info(mesh_name=mesh_name)
-        hemi_list = kwargs.get('hemi_list', ['lh', 'rh'])
-        ax = kwargs.pop('ax', None)
-        if ax is None:
-            fig = plt.figure(figsize=(10,10))
-            ax = fig.add_subplot(111, projection='3d')
-        else:
-            fig = ax.get_figure()
-            # TODO make ax projection 3d
-
-        colorbar=kwargs.pop('colorbar', True)
-
-        disp_rgb, cmap_dict = self.return_display_rgb(
-            data=data, split_hemi=True, return_cmap_dict=True, **kwargs
-        )
-        self.get_mesh_info(mesh_name)
-        mpts = {
-            'lh': self.mesh_info[mesh_name]['lh']['coords'],
-            'rh': self.mesh_info[mesh_name]['rh']['coords'],
-        }
-        mpolys = {
-            'lh': self.mesh_info[mesh_name]['lh']['faces'],
-            'rh': self.mesh_info[mesh_name]['rh']['faces'],
-        }
-
-
-        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
-        for hemi in hemi_list:
-            if rot_angles is not None:
-                mpts[hemi] = dpu_coord_rot(mpts[hemi], rot_angles)
-            if np.isnan(mpts[hemi][0][0]):
-                continue
-
-            pts = mpts[hemi]
-            faces = mpolys[hemi].astype(int)
-
-            # Build (n_faces, 3, 3) array of 3D triangle vertices
-            polys = pts[faces]  # shape (n_faces, 3, 3)
-
-            # Build facecolors from vertex RGB if available
-            facecolors = None
-            if disp_rgb is not None and hemi in disp_rgb and disp_rgb[hemi] is not None:
-                vcols = np.asarray(disp_rgb[hemi], dtype=float)  # (n_vertices,3) or (n_vertices,4)
-                if vcols.max() > 1.001:
-                    vcols = vcols / 255.0  # normalize
-                if vcols.shape[1] == 3:
-                    # add alpha channel
-                    alpha = np.ones((vcols.shape[0], 1))
-                    vcols = np.hstack([vcols, alpha])
-                facecolors = vcols[faces].mean(axis=1)  # average to (n_faces,4)
-
-            # Fallback uniform grey if no colors
-            if facecolors is None:
-                facecolors = np.repeat([[0.8, 0.8, 0.8, 1.0]], polys.shape[0], axis=0)
-
-            # Create and add the Poly3DCollection
-            coll = Poly3DCollection(polys, facecolors=facecolors, edgecolor='none')
-            ax.add_collection3d(coll)
-        return None
-        for roi in roi_list:
-            roi_obj = self._return_roi_borders_in_order(roi)
-            for roi_dict in roi_obj:
-                hemi = roi_dict['hemi']
-                if hemi not in hemi_list:
-                    continue
-                x = mpts[hemi][roi_dict['border_vx'],0]
-                y = mpts[hemi][roi_dict['border_vx'],1]
-                default_settings = {
-                        'marker': '.',
-                        'color': 'k',
-                        'linestyle': 'None',  
-                        'markersize': 0.8,
-                    }
-                default_settings.update(kwargs.get('roi_line', {}))
-                ax.plot(
-                    x,y, 
-                    # roi_dict['border_coords'][:,0],
-                    # roi_dict['border_coords'][:,1],
-                    # '.',
-                    # color='k',
-                    # linewidth=2, markersize=.8,
-                    **default_settings,
-                    label=roi_dict['roi'] if roi_dict['first_instance'] else None,
-                )
-        # Add color bar
-        if colorbar:
-            norm = mpl.colors.Normalize(vmin=cmap_dict['vmin'], vmax=cmap_dict['vmax'])
-            cmap = dpu_get_cmap(cmap_dict['cmap'])
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-            sm.set_array([])
-            fig.colorbar(sm, ax=ax, orientation='horizontal', label=surf_name)
-        ax.axis('off')
-        ax.set_aspect('equal')
-        return cmap_dict
-    
-
     def reload_flat(self, flat_name):
         '''Reload the flatmap
         '''
@@ -818,7 +709,7 @@ class GenMeshMaker(FSMaker):
 
     def return_pyc_sm(self, mask, hemi, **kwargs):
         sm = self.return_sm(mask, hemi, **kwargs)
-        from dpu_mini.pyctx_cannibalized.surface import Surface        
+        from dpu_mini.pyctx.surface import Surface        
         sm = Surface(sm['coords'], sm['faces'])
         return sm
 
