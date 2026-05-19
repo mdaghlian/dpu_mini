@@ -11,6 +11,50 @@ from scipy.ndimage import zoom
 
 opj = os.path.join
 
+def source_bash(script_path, *args, update_kernel=True):
+    """
+    Source a bash script with arguments and optionally
+    persist exported environment variables into the Jupyter kernel.
+
+    Parameters
+    ----------
+    script_path : str
+        Path to the bash script
+    *args : str
+        Arguments passed to the script
+    update_kernel : bool
+        If True, updates os.environ so variables persist in notebook
+
+    Returns
+    -------
+    dict
+        Environment variables produced by the script
+    """
+
+    # Build a safe bash command
+    arg_str = " ".join([repr(a) for a in args])
+
+    bash_cmd = f"""
+    bash -c '
+    set -a
+    source "{script_path}" {arg_str}
+    set +a
+    env
+    '
+    """
+
+    result = subprocess.check_output(bash_cmd, shell=True, text=True)
+
+    env_dict = {}
+    for line in result.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            env_dict[k] = v
+            if update_kernel:
+                os.environ[k] = v
+
+    return env_dict
+
 def dpu_random_string(length):
     # choose from all lowercase letter
     letters = string.ascii_lowercase
