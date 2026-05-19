@@ -638,7 +638,7 @@ def dpu_igl_flatten(mesh_info, **kwargs):
             # If not, then we need to flip the orientation
             # [1] x 
             coords = submesh_info['coords']
-            p1, p2 = dpu_sph2flat(coords, **kwargs)
+            p1, p2, _ = dpu_sph2flat(coords, **kwargs)
             corr_x = dpu_get_corr(p1, uva[:,0])
             corr_y = dpu_get_corr(p2, uva[:,1])
             # uva[:,0] = -1
@@ -789,7 +789,7 @@ def dpu_align_igl_to_sph(submesh_info, uva, mesh_info, align_mask=None, **kwargs
     """
     # Compute lat/lon flatten for the submesh vertices (target)
     coords = submesh_info['coords']
-    p1, p2 = dpu_sph2flat(coords, **kwargs)
+    p1, p2, _ = dpu_sph2flat(coords, **kwargs)
     a = np.vstack([p1, p2]).T  # (m,2)
     b = uva[:,:2]
     b_updated = align_points(a,b, align_mask=align_mask)
@@ -814,13 +814,13 @@ def dpu_flatten(mesh_info, **kwargs):
         p1, p2, vx_to_include = dpu_sph2flat(mesh_info['coords'], **kwargs)
     elif method=='igl':
         # try:
-        p1, p2 = dpu_sph2flat(mesh_info['coords'], **kwargs)
+        p1, p2, _ = dpu_sph2flat(mesh_info['coords'], **kwargs)
         initial_guess = np.vstack([p1,p2]).T        
         p1, p2, vx_to_include_IGL, face_to_include_IGL = dpu_igl_flatten(mesh_info,initial_guess=initial_guess, **kwargs)
         vx_to_include = vx_to_include_IGL
         f_to_include = face_to_include_IGL
         # except:
-        # p1, p2 = dpu_sph2flat(mesh_info['coords'], **kwargs)
+        # p1, p2, _ = dpu_sph2flat(mesh_info['coords'], **kwargs)
         
     elif method=='lbo':
         p1, p2 = dpu_lbo_flatten(mesh_info)
