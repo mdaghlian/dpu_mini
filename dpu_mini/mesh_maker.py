@@ -620,6 +620,8 @@ class GenMeshMaker(FSMaker):
                 mpts[hemi] = dpu_coord_rot(mpts[hemi], rot_angles)      
             if np.isnan(mpts[hemi][0][0]):
                 continue
+            if mpolys[hemi].shape[0]==0:
+                continue
             triang = mpl.tri.Triangulation(
                 mpts[hemi][:,0],
                 mpts[hemi][:,1],
@@ -679,7 +681,7 @@ class GenMeshMaker(FSMaker):
         
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-        # ax.set_aspect('equal')
+        ax.set_aspect('equal')
         # ax.set_aspect('equal')
         ax.axis('off')
         return cmap_dict
