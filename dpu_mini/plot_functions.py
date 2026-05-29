@@ -22,6 +22,20 @@ default_pol_bounds = np.linspace(-np.pi, np.pi, 13)
 #         plt.unregister_cmap(cm_name)
 
 def dpu_cmap_plotter(cmap, vmin=None, vmax=None, title='', **kwargs):
+    '''
+    Plot a colormap with the specified bounds and title.
+
+    Input:
+        cmap            str or matplotlib colormap
+        vmin            float           minimum value for colormap
+        vmax            float           maximum value for colormap
+        title           str             title of plot
+        *Optional*
+        ax              matplotlib axes
+        return_ax       bool            Whether to return the axes
+        return_fig      bool            Whether to return the figure
+        plot_type       str             Type of plot to make. Options are: 'linear', 'pol', 'ecc'
+    '''
     ax = kwargs.get('ax', None)
     return_ax = kwargs.get('return_ax', False)
     return_fig = kwargs.get('return_fig', False)
