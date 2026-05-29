@@ -11,6 +11,32 @@ from dpu_mini.plot_functions import *
 
 from tqdm import tqdm
 
+def load_benson14_info(sub, fs_dir):
+    ''' *no*
+    '''
+    import nibabel as nib
+    sub_fs_dir = opj(fs_dir, sub, 'surf')    
+    b14_dict = {}
+    for p in ['eccen', 'angle', 'sigma', 'varea']:
+        hemi_p = []
+        for hemi in ['lh', 'rh']:
+            b14_p_file = dpu_find_file_in_folder(
+                [hemi, p, 'benson14', '.mgz'],
+                sub_fs_dir,
+            )
+            hemi_p.append(nib.load(b14_p_file).get_fdata().squeeze())   
+        if p=='eccen':
+            better_name = 'ecc'
+        elif p=='angle':
+            better_name = 'pol'
+        elif p=='sigma':
+            better_name = 'size'
+        elif p=='varea':
+            better_name = 'varea'
+        b14_dict[better_name] = np.concatenate(hemi_p, axis=0)
+    return b14_dict
+
+
 def dpu_smooth_data(distances, time_series, fwhm_mm, sigma_units='mm'):
     """
     Smooths time series data associated with vertices on a cortical surface
@@ -60,8 +86,11 @@ def dpu_pairwise_geodesic_distance(mesh_info, submesh_bool, **kwargs):
         print(nvx)
         geo_dists = []
         print('Creating distance by distance matrices')
-        keys_to_keep = ['m', 'fem']
-        pyc_kwargs = dict(filter(lambda item: item[0] in keys_to_keep, kwargs.items()))
+        pyc_kwargs = {}
+        pyc_kwargs['m'] = kwargs.get('m', 100)
+        pyc_kwargs['fem'] = kwargs.get('fem', None)
+
+        # pyc_kwargs = dict(filter(lambda item: item[0] in keys_to_keep, kwargs.items()))
 
         for i in tqdm(range(nvx), desc="Calculating geodesic distances"):
             geo_dists.append(sm.geodesic_distance(i, **pyc_kwargs))
