@@ -9,12 +9,11 @@ import numpy as np
 # --- To 
 # from ..options import config
 # from .. import formats
-import dpu_mini
-
-base_dir = os.path.dirname(os.path.dirname(dpu_mini.__file__))
+# import dpu_mini
+# base_dir = os.path.dirname(os.path.dirname(dpu_mini.__file__))
+opd = os.path.dirname
+base_dir = opd(opd(opd(__file__)))
 vtp_path = os.path.join(base_dir, "VTP_cpp")
-
-
 
 class ExactGeodesicException(Exception):
     """Raised when exact_geodesic_distance() is unavailable or used improperly
