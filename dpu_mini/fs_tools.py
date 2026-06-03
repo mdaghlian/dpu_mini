@@ -6,7 +6,10 @@ from collections import OrderedDict
 opj = os.path.join
 
 from dpu_mini.utils import *
-from dpu_mini.plot_functions import *
+try: 
+    from dpu_mini.plot_functions import *
+except:
+    print('Plot functions not found')
 
 
 path_to_utils = os.path.abspath(os.path.dirname(__file__))
