@@ -644,7 +644,7 @@ class GenMeshMaker(FSMaker):
             )
         for roi in roi_list:
 
-            roi_obj = self._return_roi_borders_in_order(roi)
+            roi_obj = self._return_roi_borders_in_order(roi, hemi_list=hemi_list)
             for roi_dict in roi_obj:
                 hemi = roi_dict['hemi']
                 if hemi not in hemi_list:
