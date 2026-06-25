@@ -1,0 +1,52 @@
+body {
+    background-color: #e0e0e0;
+    color: #e0e0e0;
+    font-family: sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Row of control columns (radius/inflate, vmin/vmax, cmap/rsq_thresh, threshold text) */
+.control-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 160px;
+}
+
+.column2 {
+    margin-bottom: 1rem;
+}
+
+.label {
+    font-size: 0.85rem;
+    color: #aaaaaa;
+    margin-top: 0.4rem;
+}
+
+.column input,
+.column textarea,
+.column2 input {
+    background-color: #1f1f1f;
+    color: #e0e0e0;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 4px 6px;
+}
+
+.column button {
+    margin-top: 0.5rem;
+    align-self: flex-start;
+}

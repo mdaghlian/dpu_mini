@@ -541,8 +541,8 @@ class MeshDash(GenMeshMaker):
 
         '''
         import dash
-        assets_type = kwargs.get('assets_type', 'boring')
-        assets_type = 'mesh_dash_assets_boring' if assets_type=='boring' else 'mesh_dash_assets'
+        # assets_type = kwargs.get('assets_type', 'boring')
+        assets_type = 'mesh_dash_assets'
         app = dash.Dash(
             __name__,
             assets_folder=opj(os.path.dirname(__file__),assets_type)
@@ -563,6 +563,10 @@ class MeshDash(GenMeshMaker):
             self.web_df[vx_col_name] = self.web_vxcol[vx_col_name]['data'].copy()
 
         num_input_args = dict(type='number', n_submit=0, debounce=True)
+        def labeled_input(label, input_id, **input_kwargs):
+            # Flat [Label, Input] pair so columns keep their existing DOM/CSS structure
+            return [html.Label(label, className='label'), dcc.Input(id=input_id, **input_kwargs)]
+
         if self.roi_list==[]:
             roi_html = html.Div(id='rois-dropdown')
         else:
@@ -578,40 +582,34 @@ class MeshDash(GenMeshMaker):
 
         app.layout = html.Div([
             html.H1(self.title),
-            # COLUMN 1            
+            # Row of control columns, laid out side by side
             html.Div([
-                # Radius
-                html.Label('radius', className='label'),
-                dcc.Input(id='radius', value=2,  **num_input_args),
-                # Inflate 
-                html.Label('inflate', className='label'),
-                dcc.Input(id='inflate', value=1,  **num_input_args),
-            ], className='column'),
-            # COLUMN 2
-            html.Div([
-                # COLOR STUFF
-                html.Label('vmin', className='label'),
-                dcc.Input(id='vmin', value=init_vmin,  **num_input_args),
-                html.Label('vmax', className='label'),
-                dcc.Input(id='vmax', value=init_vmax,  **num_input_args),
-            ], className='column'),
-            # COLUMN 3
-            html.Div([            
-                html.Label('cmap', className='label'),
-                dcc.Input(id='cmap',  type='string', value=init_cmap, n_submit=0, debounce=True),
-                html.Label('rsq_thresh', className='label'),
-                dcc.Input(id='rsq_thresh', value=init_rsq_thresh,  **num_input_args),
-            ], className='column'),
-            # COLUMN 4
-            html.Div([
-                dcc.Textarea(
-                    id='thresh-text',
-                    placeholder='Enter a threshold...',
-                    value='',
-                    style={'width': '100%', 'height': 100},
-                ),
-                html.Button('Submit', id='submit-button', n_clicks=0),
-            ], className='column'),
+                # COLUMN 1: mesh geometry
+                html.Div([
+                    *labeled_input('radius', 'radius', value=2, **num_input_args),
+                    *labeled_input('inflate', 'inflate', value=1, **num_input_args),
+                ], className='column'),
+                # COLUMN 2: colour range
+                html.Div([
+                    *labeled_input('vmin', 'vmin', value=init_vmin, **num_input_args),
+                    *labeled_input('vmax', 'vmax', value=init_vmax, **num_input_args),
+                ], className='column'),
+                # COLUMN 3: colour map + threshold
+                html.Div([
+                    *labeled_input('cmap', 'cmap', type='string', value=init_cmap, n_submit=0, debounce=True),
+                    *labeled_input('rsq_thresh', 'rsq_thresh', value=init_rsq_thresh, **num_input_args),
+                ], className='column'),
+                # COLUMN 4: custom threshold expression
+                html.Div([
+                    dcc.Textarea(
+                        id='thresh-text',
+                        placeholder='Enter a threshold...',
+                        value='',
+                        style={'width': '100%', 'height': 100},
+                    ),
+                    html.Button('Submit', id='submit-button', n_clicks=0),
+                ], className='column'),
+            ], className='control-row'),
 
             html.Hr(),            
             roi_html,  # ROI HTML
