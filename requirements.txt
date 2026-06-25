@@ -6,4 +6,3 @@ regex
 PyYAML
 pandas
 tqdm
-ipykernel
