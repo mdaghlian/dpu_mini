@@ -768,6 +768,69 @@ def dpu_serialize_volume_info(volume_info):
             strings.append(f'{key:6s} = {val[0]:.10g} {val[1]:.10g} {val[2]:.10g}\n'.encode())
     return b''.join(strings)
 
+def dpu_fs_write(mesh_info, output_file, **kwargs):
+
+    pts = mesh_info['coords'].copy() 
+    # pts[:,0] -= 100 
+    # pts[:,1] -= 100
+    # pts[:,2] += 100
+
+    # V2 
+    # pts[:,[0,1]] = pts[:,[1,0]]
+    # V3 
+    # pts[:,[0,2]] = pts[:,[2,0]]
+    # V4
+    # pts[:,0] += 25
+
+    # Switch x and y
+    # pts[:,[0,1]] = pts[:,[1,0]]
+    polys = mesh_info['faces'].copy()
+    comment = kwargs.get('comment', '')
+    print(mesh_info.keys())
+    # Step 2: Open the file in binary write mode
+    with open(output_file, 'wb') as fp:
+        # Write the magic number header for .surf format
+        fp.write(b'\xFF\xFF\xFE')  # Magic number for FreeSurfer binary .surf file
+        fp.write((comment+'\n\n').encode())
+        fp.write(struct.pack('>2I', len(pts), len(polys)))
+        fp.write(pts.astype(np.float32).byteswap().tostring())
+        fp.write(polys.astype(np.uint32).byteswap().tostring())
+        fp.write(b'\n')
+        if mesh_info['volume_info']!={}:
+            fp.write(dpu_serialize_volume_info(mesh_info['volume_info']))
+
+    print(f"Surface file '{output_file}'")
+
+
+def load_benson14_info(sub, fs_dir):
+    ''' 
+    '''
+    import nibabel as nib
+    sub_fs_dir = opj(fs_dir, sub, 'surf')    
+    b14_dict = {}
+    for p in ['eccen', 'angle', 'sigma', 'varea']:
+        hemi_p = []
+        for hemi in ['lh', 'rh']:
+            b14_p_file = dpu_find_file_in_folder(
+                [hemi, p, 'benson14', '.mgz'],
+                sub_fs_dir,
+            )
+            hemi_p.append(nib.load(b14_p_file).get_fdata().squeeze())   
+        if p=='eccen':
+            better_name = 'ecc'
+        elif p=='angle':
+            better_name = 'pol'
+        elif p=='sigma':
+            better_name = 'size'
+        elif p=='varea':
+            better_name = 'varea'
+        b14_dict[better_name] = np.concatenate(hemi_p, axis=0)
+    return b14_dict
+
+# ***********************************************************************************************************************
+# STUFF COPIED FROM NIBABEL
+# ***********************************************************************************************************************
+
 def dpu_fread3(fobj):
     """Read a 3-byte int from an open binary file object
 
@@ -865,34 +928,6 @@ def dpu_read_volume_info(fobj):
     # Ignore the rest
     return volume_info
 
-def dpu_serialize_volume_info(volume_info):
-    """Copied from from https://github.com/nipy/nibabel/blob/master/nibabel/freesurfer/io.py
-    Helper for serializing the volume info.
-    """
-    keys = ['head', 'valid', 'filename', 'volume', 'voxelsize', 'xras', 'yras', 'zras', 'cras']
-    diff = set(volume_info.keys()).difference(keys)
-    if len(diff) > 0:
-        raise ValueError(f'Invalid volume info: {diff.pop()}.')
-
-    strings = list()
-    for key in keys:
-        if key == 'head':
-            if not (
-                np.array_equal(volume_info[key], [20])
-                or np.array_equal(volume_info[key], [2, 0, 20])
-            ):
-                print('Unknown extension code.')
-            strings.append(np.array(volume_info[key], dtype='>i4').tobytes())
-        elif key in ('valid', 'filename'):
-            val = volume_info[key]
-            strings.append(f'{key} = {val}\n'.encode())
-        elif key == 'volume':
-            val = volume_info[key]
-            strings.append(f'{key} = {val[0]} {val[1]} {val[2]}\n'.encode())
-        else:
-            val = volume_info[key]
-            strings.append(f'{key:6s} = {val[0]:.10g} {val[1]:.10g} {val[2]:.10g}\n'.encode())
-    return b''.join(strings)
 # ***
 
 
