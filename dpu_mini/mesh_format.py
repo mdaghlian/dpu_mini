@@ -6,36 +6,9 @@ import struct
 opj = os.path.join
 
 from dpu_mini.utils import *
-from dpu_mini.fs_tools import dpu_serialize_volume_info
 from dpu_mini.plot_functions import *
 
 from tqdm import tqdm
-
-def load_benson14_info(sub, fs_dir):
-    ''' *no*
-    '''
-    import nibabel as nib
-    sub_fs_dir = opj(fs_dir, sub, 'surf')    
-    b14_dict = {}
-    for p in ['eccen', 'angle', 'sigma', 'varea']:
-        hemi_p = []
-        for hemi in ['lh', 'rh']:
-            b14_p_file = dpu_find_file_in_folder(
-                [hemi, p, 'benson14', '.mgz'],
-                sub_fs_dir,
-            )
-            hemi_p.append(nib.load(b14_p_file).get_fdata().squeeze())   
-        if p=='eccen':
-            better_name = 'ecc'
-        elif p=='angle':
-            better_name = 'pol'
-        elif p=='sigma':
-            better_name = 'size'
-        elif p=='varea':
-            better_name = 'varea'
-        b14_dict[better_name] = np.concatenate(hemi_p, axis=0)
-    return b14_dict
-
 
 def dpu_smooth_data(distances, time_series, fwhm_mm, sigma_units='mm'):
     """
@@ -856,7 +829,6 @@ def dpu_flatten(mesh_info, **kwargs):
     elif method == 'none':
         p1 = mesh_info['coords'][:,0]
         p2 = mesh_info['coords'][:,1]
-
     # find relative scale...
     flat_info['x'] = p1 #- p1.mean()# Demean
     flat_info['y'] = p2 #- p2.mean()# Demean
@@ -869,23 +841,21 @@ def dpu_flatten(mesh_info, **kwargs):
         np.isin(mesh_info['k'], vx_not_included)    
     
     # [2] - faces with long edges
-    # Find the mean length of an edge 
-    face_lengths = []
-    for i_f in range(mesh_info['i'].shape[0]):
-        ei2j = np.sqrt(
-            (flat_info['x'][mesh_info['i'][i_f]] - flat_info['x'][mesh_info['j'][i_f]])**2 +
-            (flat_info['y'][mesh_info['i'][i_f]] - flat_info['y'][mesh_info['j'][i_f]])**2
-        )
-        ei2k = np.sqrt(
-            (flat_info['x'][mesh_info['i'][i_f]] - flat_info['x'][mesh_info['k'][i_f]])**2 +
-            (flat_info['y'][mesh_info['i'][i_f]] - flat_info['y'][mesh_info['k'][i_f]])**2
-        )
-        ej2k = np.sqrt(
-            (flat_info['x'][mesh_info['j'][i_f]] - flat_info['x'][mesh_info['k'][i_f]])**2 +
-            (flat_info['y'][mesh_info['j'][i_f]] - flat_info['y'][mesh_info['k'][i_f]])**2
-        )
-        face_lengths.append(ei2j+ei2k+ej2k)
-    face_lengths = np.array(face_lengths)
+    # Find the mean length of an edge
+    fi, fj, fk = mesh_info['i'], mesh_info['j'], mesh_info['k']
+    ei2j = np.sqrt(
+        (flat_info['x'][fi] - flat_info['x'][fj])**2 +
+        (flat_info['y'][fi] - flat_info['y'][fj])**2
+    )
+    ei2k = np.sqrt(
+        (flat_info['x'][fi] - flat_info['x'][fk])**2 +
+        (flat_info['y'][fi] - flat_info['y'][fk])**2
+    )
+    ej2k = np.sqrt(
+        (flat_info['x'][fj] - flat_info['x'][fk])**2 +
+        (flat_info['y'][fj] - flat_info['y'][fk])**2
+    )
+    face_lengths = ei2j + ei2k + ej2k
     m_face_lengths = face_lengths.mean()
     std_face_lengths = face_lengths.std()
     # Find the faces with edges > 4*std
@@ -1151,39 +1121,6 @@ def dpu_obj_write(mesh_info, **kwargs):
     
     return obj_str
 
-
-def dpu_fs_write(mesh_info, output_file, **kwargs):
-
-    pts = mesh_info['coords'].copy() 
-    # pts[:,0] -= 100 
-    # pts[:,1] -= 100
-    # pts[:,2] += 100
-
-    # V2 
-    # pts[:,[0,1]] = pts[:,[1,0]]
-    # V3 
-    # pts[:,[0,2]] = pts[:,[2,0]]
-    # V4
-    # pts[:,0] += 25
-
-    # Switch x and y
-    # pts[:,[0,1]] = pts[:,[1,0]]
-    polys = mesh_info['faces'].copy()
-    comment = kwargs.get('comment', '')
-    print(mesh_info.keys())
-    # Step 2: Open the file in binary write mode
-    with open(output_file, 'wb') as fp:
-        # Write the magic number header for .surf format
-        fp.write(b'\xFF\xFF\xFE')  # Magic number for FreeSurfer binary .surf file
-        fp.write((comment+'\n\n').encode())
-        fp.write(struct.pack('>2I', len(pts), len(polys)))
-        fp.write(pts.astype(np.float32).byteswap().tostring())
-        fp.write(polys.astype(np.uint32).byteswap().tostring())
-        fp.write(b'\n')
-        if mesh_info['volume_info']!={}:
-            fp.write(dpu_serialize_volume_info(mesh_info['volume_info']))
-
-    print(f"Surface file '{output_file}'")
 
 # ************************************************************************
 def dpu_vtk_to_ply(vtk_file):
