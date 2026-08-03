@@ -10,19 +10,23 @@ try:
     from dpu_mini.plot_functions import *
 except:
     print('Plot functions not found')
+from dpu_mini.base_mesh import BaseMesh
 
 
 path_to_utils = os.path.abspath(os.path.dirname(__file__))
 
-class FSMaker(object):
-    '''Used to make a freesurfer file, and view a surface in freesurfer. 
-    Will create a curv file in subjects freesurfer dir, and load it a specific colormap 
+class FSMaker(BaseMesh):
+    '''Used to make a freesurfer file, and view a surface in freesurfer.
+    Will create a curv file in subjects freesurfer dir, and load it a specific colormap
     saved as the relevant command
+
+    Builds on top of BaseMesh (generic mesh container) and adds everything
+    that is specific to talking to a FreeSurfer subjects directory.
     '''
     def __init__(self, sub, fs_dir=os.environ['SUBJECTS_DIR'], **kwargs):
         sub = dpu_hyphen_parse('sub', sub)
-        self.sub = sub        
-        self.fs_dir = fs_dir        # Where the freesurfer files are        
+        super().__init__(sub=sub, output_dir=kwargs.pop('output_dir', None), **kwargs)
+        self.fs_dir = fs_dir        # Where the freesurfer files are
         print(f'Using fs dir = {self.fs_dir}')
         self.sub_surf_dir = opj(fs_dir, sub, 'surf')
         self.sub_label_dir = opj(fs_dir, sub, 'label')
@@ -31,15 +35,9 @@ class FSMaker(object):
         n_vx, n_faces = dpu_load_nfaces_nverts(self.sub, self.fs_dir)
         self.n_vx = {'lh':n_vx[0], 'rh':n_vx[1]}
         self.total_n_vx = sum(n_vx)
-        lhm,rhm = np.zeros(self.total_n_vx, dtype=bool),np.zeros(self.total_n_vx, dtype=bool)
-        lhm[:self.n_vx['lh']] = True
-        rhm[self.n_vx['lh']:] = True
-        self.hemi_masks = {
-            'lh' : lhm, 
-            'rh' : rhm,
-        }
         self.n_faces = {'lh':n_faces[0], 'rh':n_faces[1]}
         self.total_n_faces = sum(n_faces)
+        self._update_hemi_masks()
         self.overlay_str = {}
         self.open_surf_cmds = {}
         self.surf_list = []
