@@ -298,6 +298,7 @@ class MeshDash(GenMeshMaker):
         - vmax : float vmax for cmap        
         - rgb_direct # ignore everything just put in the RGB values
         '''        
+        vx_col_name = vx_col_name.replace(' ', '_')
         rgb_direct = kwargs.get('rgb_direct', False)
         data4mask = kwargs.get('data4mask', np.ones_like(data))
         
