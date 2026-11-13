@@ -11,8 +11,21 @@ import numpy as np
 # from .. import formats
 import dpu_mini
 
-base_dir = os.path.dirname(os.path.dirname(dpu_mini.__file__))
-vtp_path = os.path.join(base_dir, "VTP_cpp")
+import platform
+import shutil
+
+_exe_name = "VTP.exe" if platform.system() == "Windows" else "VTP"
+_pkg_dir = os.path.dirname(dpu_mini.__file__)
+# Search order: $DPU_MINI_VTP, packaged binary, source-tree build, $PATH
+vtp_path = next(
+    (p for p in (
+        os.environ.get("DPU_MINI_VTP"),
+        os.path.join(_pkg_dir, "bin", _exe_name),
+        os.path.join(os.path.dirname(_pkg_dir), "VTP_cpp", "build", _exe_name),
+        shutil.which(_exe_name),
+    ) if p and os.path.isfile(p)),
+    os.path.join(_pkg_dir, "bin", _exe_name),  # missing -> clear error at call time
+)
 
 
 

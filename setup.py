@@ -5,54 +5,44 @@ import shutil
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 
-class BuildCPPProject(_build_py):
+# The VTP exact-geodesic tool (C++, built with CMake) is optional: it is only
+# needed for Surface.exact_geodesic_distance(). Opt in with
+#     DPU_MINI_BUILD_VTP=1 pip install .
+# A plain `pip install` needs no git, CMake, compiler or network access.
+BUILD_VTP = os.environ.get("DPU_MINI_BUILD_VTP", "0").lower() in ("1", "true", "yes")
+
+
+def build_vtp(base_dir):
+    repo_url = "https://github.com/YipengQin/VTP_source_code.git"
+    repo_dir = os.path.join(base_dir, "VTP_cpp")
+
+    if not os.path.exists(repo_dir):
+        print("Cloning VTP repository...")
+        subprocess.check_call(["git", "clone", repo_url, repo_dir])
+
+    build_dir = os.path.join(repo_dir, "build")
+    os.makedirs(build_dir, exist_ok=True)
+    subprocess.check_call(["cmake", ".."], cwd=build_dir)
+    subprocess.check_call(["cmake", "--build", "."], cwd=build_dir)
+
+    exe_name = "VTP.exe" if platform.system() == "Windows" else "VTP"
+    exe_path = os.path.join(build_dir, exe_name)
+    if not os.path.exists(exe_path):
+        raise RuntimeError(f"VTP compilation failed: {exe_path} not found")
+
+    package_bin_dir = os.path.join(base_dir, "dpu_mini", "bin")
+    os.makedirs(package_bin_dir, exist_ok=True)
+    shutil.copy(exe_path, os.path.join(package_bin_dir, exe_name))
+    print(f"Installed VTP to {package_bin_dir}")
+
+
+class BuildPy(_build_py):
     def run(self):
-        # Define the repository URL and local directory for the C++ project.
-        repo_url = "https://github.com/YipengQin/VTP_source_code.git"
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        repo_dir = os.path.join(base_dir, "VTP_cpp")
-
-        # --- Step 1. Clone the C++ repo if not already cloned ---
-        if not os.path.exists(repo_dir):
-            print("Cloning C++ repository...")
-            subprocess.check_call(["git", "clone", repo_url, repo_dir])
+        if BUILD_VTP:
+            build_vtp(os.path.dirname(os.path.abspath(__file__)))
         else:
-            print("C++ repository already cloned.")
-
-        # --- Step 2. Build the C++ project using CMake ---
-        build_dir = os.path.join(repo_dir, "build")
-        os.makedirs(build_dir, exist_ok=True)
-        print("Configuring the C++ build with CMake...")
-        subprocess.check_call(["cmake", ".."], cwd=build_dir)
-        print("Building the C++ project...")
-        subprocess.check_call(["cmake", "--build", "."], cwd=build_dir)
-
-        # --- Step 3. Locate the compiled executable ---
-        exe_name = "VTP.exe" if platform.system() == "Windows" else "VTP"
-        exe_path = os.path.join(build_dir, exe_name)
-        if not os.path.exists(exe_path):
-            raise RuntimeError(f"Compilation failed: {exe_path} not found")
-        print(f"Found executable: {exe_path}")
-
-        # --- Step 4. Copy the executable into your package folder ---
-        package_bin_dir = os.path.join(base_dir, "dpu_mini", "bin")
-        os.makedirs(package_bin_dir, exist_ok=True)
-        destination = os.path.join(package_bin_dir, exe_name)
-        print(f"Copying executable to {destination}...")
-        shutil.copy(exe_path, destination)
-
-        # Continue with the normal build process.
+            print("Skipping optional VTP build (set DPU_MINI_BUILD_VTP=1 to enable).")
         _build_py.run(self)
 
-setup(
-    # Since metadata is now in setup.cfg, we only need to reference it.
-    cmdclass={"build_py": BuildCPPProject},
-)
-base_dir = os.path.dirname(os.path.abspath(__file__))
-cli_setup_file = os.path.join(base_dir, "cli_setup.sh")
 
-print('********************************************************')
-print('********************************************************')
-print('********************************************************')
-print('ADD THE FOLLOWING TO .bash_profile TO ENABLE CLI TOOLS!!!')
-print(f'source {cli_setup_file}')
+setup(cmdclass={"build_py": BuildPy})
